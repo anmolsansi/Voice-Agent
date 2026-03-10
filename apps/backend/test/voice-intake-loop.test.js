@@ -62,3 +62,37 @@ test('retry bridge maps valid answer to complete', () => {
   assert.equal(result.nextAction, 'complete');
   assert.equal(result.result, 'valid');
 });
+
+
+test('mapper preserves mapping order and confidence differs for partial vs final', () => {
+  const partial = mapTranscriptEventToFieldUpdates({
+    type: 'partial_transcript',
+    sessionId: 'session_2',
+    utteranceId: 'utt_partial',
+    text: 'first name is Jamie and last name is Chen',
+    timestamp: Date.now(),
+  });
+
+  const final = mapTranscriptEventToFieldUpdates({
+    type: 'final_transcript',
+    sessionId: 'session_2',
+    utteranceId: 'utt_final',
+    text: 'first name is Jamie and last name is Chen',
+    timestamp: Date.now(),
+  });
+
+  assert.equal(partial.error, null);
+  assert.equal(final.error, null);
+
+  assert.deepEqual(
+    partial.updates.map((u) => u.fieldKey),
+    ['first_name', 'last_name'],
+  );
+  assert.deepEqual(
+    final.updates.map((u) => u.fieldKey),
+    ['first_name', 'last_name'],
+  );
+
+  assert.ok(partial.updates.every((u) => u.confidence === 0.55));
+  assert.ok(final.updates.every((u) => u.confidence === 0.85));
+});
