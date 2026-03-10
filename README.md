@@ -140,18 +140,6 @@ Submission is blocked until all required fields are complete and valid.
 
 ---
 
-## Team Execution Model
-
-- **Staff Software Engineer**: architecture + standards + PR review gate
-- **Software Engineer 1**: frontend form UX
-- **Software Engineer 2**: backend APIs + validation/state machine
-- **Software Engineer 3**: voice pipeline integration
-- **Software Engineer 4**: security, audit logging, testing/CI hardening
-
-Each feature ships via dedicated branch and pull request.
-
----
-
 ## PR Policy
 
 - One feature/theme per PR
