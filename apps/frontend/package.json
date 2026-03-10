@@ -8,6 +8,6 @@
     "start": "next start",
     "lint": "echo 'frontend lint placeholder'",
     "typecheck": "echo 'frontend typecheck placeholder'",
-    "test": "echo 'frontend test placeholder'"
+    "test": "node --test"
   }
 }

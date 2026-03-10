@@ -166,4 +166,5 @@ Submission is blocked until all required fields are complete and valid.
 
 ✅ Initial planning merged.
 ✅ Project scaffold merged.
-🚧 Intake schema + validation in progress on `feat/intake-schema-and-validation`.
+✅ Intake schema + validation merged.
+🚧 Manual intake UI in progress on `feat/manual-intake-ui`.
