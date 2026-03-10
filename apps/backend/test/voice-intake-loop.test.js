@@ -96,3 +96,18 @@ test('mapper preserves mapping order and confidence differs for partial vs final
   assert.ok(partial.updates.every((u) => u.confidence === 0.55));
   assert.ok(final.updates.every((u) => u.confidence === 0.85));
 });
+
+
+test('mapper propagates utterance id to each extracted update', () => {
+  const output = mapTranscriptEventToFieldUpdates({
+    type: 'final_transcript',
+    sessionId: 'session_3',
+    utteranceId: 'utt_propagation_1',
+    text: 'first name is Mina and chief complaint is dizziness',
+    timestamp: Date.now(),
+  });
+
+  assert.equal(output.error, null);
+  assert.ok(output.updates.length >= 2);
+  assert.ok(output.updates.every((u) => u.utteranceId === 'utt_propagation_1'));
+});
