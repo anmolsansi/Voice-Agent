@@ -6,6 +6,6 @@
     "dev": "node src/index.js",
     "lint": "echo 'backend lint placeholder'",
     "typecheck": "echo 'backend typecheck placeholder'",
-    "test": "echo 'backend test placeholder'"
+    "test": "node --test"
   }
 }
