@@ -1,0 +1,19 @@
+{
+  "name": "voice-agent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Voice-Agent urgent care intake monorepo scaffold",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "check": "npm run lint && npm run typecheck && npm run test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

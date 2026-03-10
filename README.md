@@ -164,4 +164,5 @@ Submission is blocked until all required fields are complete and valid.
 
 ## Status
 
-✅ Initial planning PR in progress (this document).
+✅ Initial planning merged.
+🚧 Scaffold implementation started on `feat/project-scaffold`.

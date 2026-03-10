@@ -1,0 +1,13 @@
+{
+  "name": "@voice-agent/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "echo 'frontend lint placeholder'",
+    "typecheck": "echo 'frontend typecheck placeholder'",
+    "test": "echo 'frontend test placeholder'"
+  }
+}

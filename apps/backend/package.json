@@ -1,0 +1,11 @@
+{
+  "name": "@voice-agent/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node src/index.js",
+    "lint": "echo 'backend lint placeholder'",
+    "typecheck": "echo 'backend typecheck placeholder'",
+    "test": "echo 'backend test placeholder'"
+  }
+}
