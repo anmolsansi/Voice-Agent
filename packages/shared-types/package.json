@@ -1,0 +1,11 @@
+{
+  "name": "@voice-agent/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "types": "src/index.d.ts",
+  "scripts": {
+    "lint": "echo 'shared-types lint placeholder'",
+    "typecheck": "echo 'shared-types typecheck placeholder'",
+    "test": "echo 'shared-types test placeholder'"
+  }
+}
