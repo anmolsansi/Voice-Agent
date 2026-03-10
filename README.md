@@ -165,4 +165,5 @@ Submission is blocked until all required fields are complete and valid.
 ## Status
 
 ✅ Initial planning merged.
-🚧 Scaffold implementation started on `feat/project-scaffold`.
+✅ Project scaffold merged.
+🚧 Intake schema + validation in progress on `feat/intake-schema-and-validation`.
