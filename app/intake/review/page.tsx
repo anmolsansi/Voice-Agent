@@ -1,26 +1,37 @@
+import { buildIntakeSteps, getIntakePath, getSafeSessionId } from '@/components/intake-flow';
 import { PatientShell } from '@/components/patient-shell';
 import { SessionActions } from '@/components/session-actions';
 import { StateCard } from '@/components/state-card';
 
-const steps = [
-  { label: 'Start', status: 'complete' as const },
-  { label: 'Intake session', status: 'complete' as const },
-  { label: 'Review answers', status: 'current' as const },
-  { label: 'Complete', status: 'upcoming' as const },
-];
+type IntakeReviewPageProps = {
+  searchParams?: {
+    sessionId?: string;
+  };
+};
 
-export default function IntakeReviewPage() {
+export default function IntakeReviewPage({ searchParams }: IntakeReviewPageProps) {
+  const sessionId = getSafeSessionId(searchParams?.sessionId);
+
   return (
     <PatientShell
       eyebrow="Review"
       title="Check your information before submitting"
-      description="This route provides the shell for a final review state. Structured answers, validation details, and edit affordances will be connected in a later feature."
-      steps={steps}
+      description="This route provides a session-aware review shell so later answer summaries and edit affordances can plug in without changing the flow structure."
+      steps={buildIntakeSteps('review', sessionId)}
+      aside={
+        <div className="space-y-2 text-sm leading-6 text-slate-600">
+          <h2 className="text-base font-semibold text-slate-900">Current session</h2>
+          <p>
+            Reviewing session: <span className="font-mono text-slate-900">{sessionId}</span>
+          </p>
+          <p>This screen stays generic until structured summaries and validation details are added.</p>
+        </div>
+      }
     >
       <div className="space-y-6">
         <StateCard
           title="Review scaffold"
-          description="A future implementation will summarize captured answers here and clearly show what still needs attention."
+          description="A future implementation will summarize captured answers here, highlight anything incomplete, and offer clear ways to edit responses."
         />
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -34,16 +45,16 @@ export default function IntakeReviewPage() {
           </div>
           <StateCard
             title="Waiting on intake data"
-            description="No patient-specific values are rendered yet by design."
+            description="No patient-specific values are rendered yet by design, but the session path is preserved through this route."
             tone="warning"
           />
         </div>
 
         <SessionActions
           primaryLabel="Continue to completion"
-          primaryHref="/intake/complete"
+          primaryHref={getIntakePath('complete', sessionId)}
           secondaryLabel="Back to intake shell"
-          secondaryHref="/intake/demo-session"
+          secondaryHref={getIntakePath('session', sessionId)}
         />
       </div>
     </PatientShell>

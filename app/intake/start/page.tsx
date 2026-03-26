@@ -1,46 +1,49 @@
+import { buildIntakeSteps, getIntakePath, getSafeSessionId } from '@/components/intake-flow';
 import { PatientShell } from '@/components/patient-shell';
 import { SessionActions } from '@/components/session-actions';
 import { StateCard } from '@/components/state-card';
 
-const steps = [
-  { label: 'Start', status: 'current' as const },
-  { label: 'Intake session', status: 'upcoming' as const },
-  { label: 'Review answers', status: 'upcoming' as const },
-  { label: 'Complete', status: 'upcoming' as const },
-];
+const demoSessionId = getSafeSessionId();
 
 export default function IntakeStartPage() {
   return (
     <PatientShell
       eyebrow="Welcome"
       title="Let’s get you checked in"
-      description="This patient intake shell is designed for phone, tablet, and kiosk use. Voice and manual sections will plug into this experience without changing the surrounding flow."
-      steps={steps}
+      description="This entry route anchors the intake flow and hands patients into a session-aware workspace, review shell, and completion state without locking in schema details yet."
+      steps={buildIntakeSteps('start', demoSessionId)}
       aside={
         <div className="space-y-2 text-sm leading-6 text-slate-600">
           <h2 className="text-base font-semibold text-slate-900">What to expect</h2>
-          <p>Answer a few guided questions, review your information, and confirm when ready.</p>
-          <p>This page intentionally stays generic until intake schemas are wired in.</p>
+          <p>Begin a new intake, move through the session shell, review what was captured, and finish with a confirmation state.</p>
+          <p>This route stays intentionally generic until voice and manual intake modules are plugged in.</p>
         </div>
       }
     >
       <div className="space-y-6">
         <StateCard
           title="Ready to begin"
-          description="Start a new intake session or continue with a placeholder route for a specific session."
+          description="Use this as the stable patient entry point for new sessions, kiosk resets, QR launches, or staff-guided starts."
         />
 
-        <div className="rounded-3xl border border-slate-200 p-5">
-          <h2 className="text-lg font-semibold text-slate-900">Patient entry point</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            In the next phase, this area will initialize a session, confirm language or accessibility
-            preferences, and hand off to either voice-first or manual-first intake.
-          </p>
-          <SessionActions
-            primaryLabel="Start intake"
-            primaryHref="/intake/demo-session"
-            secondaryLabel="Jump to review"
-            secondaryHref="/intake/review"
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-3xl border border-slate-200 p-5">
+            <h2 className="text-lg font-semibold text-slate-900">Intake flow entry</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              A later implementation can create a real session here, confirm accessibility or language preferences,
+              and decide whether the patient enters a voice-first or manual-first experience.
+            </p>
+            <SessionActions
+              primaryLabel="Start intake"
+              primaryHref={getIntakePath('session', demoSessionId)}
+              secondaryLabel="Preview review route"
+              secondaryHref={getIntakePath('review', demoSessionId)}
+            />
+          </div>
+
+          <StateCard
+            title="Shell-level only"
+            description="No schema-specific sections are rendered yet; this task keeps the flow scaffolding ready for later work."
           />
         </div>
       </div>

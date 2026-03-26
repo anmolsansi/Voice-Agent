@@ -1,13 +1,7 @@
+import { buildIntakeSteps, getIntakePath } from '@/components/intake-flow';
 import { PatientShell } from '@/components/patient-shell';
 import { SessionActions } from '@/components/session-actions';
 import { StateCard } from '@/components/state-card';
-
-const steps = [
-  { label: 'Start', status: 'complete' as const },
-  { label: 'Intake session', status: 'current' as const },
-  { label: 'Review answers', status: 'upcoming' as const },
-  { label: 'Complete', status: 'upcoming' as const },
-];
 
 type IntakeSessionPageProps = {
   params: {
@@ -16,17 +10,19 @@ type IntakeSessionPageProps = {
 };
 
 export default function IntakeSessionPage({ params }: IntakeSessionPageProps) {
+  const { sessionId } = params;
+
   return (
     <PatientShell
       eyebrow="In progress"
       title="Your intake session is ready"
-      description="This route is reserved for session-aware intake content. Voice transcript UI, section scaffolds, and manual entry components can mount here without changing the patient shell."
-      steps={steps}
+      description="This route is reserved for session-aware intake content. Voice transcript UI, section scaffolds, and manual entry components can mount here without changing the surrounding shell or downstream routes."
+      steps={buildIntakeSteps('session', sessionId)}
       aside={
         <div className="space-y-2 text-sm leading-6 text-slate-600">
           <h2 className="text-base font-semibold text-slate-900">Session placeholder</h2>
           <p>
-            Session ID: <span className="font-mono text-slate-900">{params.sessionId}</span>
+            Session ID: <span className="font-mono text-slate-900">{sessionId}</span>
           </p>
           <p>
             This page intentionally avoids schema-specific fields while providing a clean container
@@ -38,7 +34,7 @@ export default function IntakeSessionPage({ params }: IntakeSessionPageProps) {
       <div className="space-y-6">
         <StateCard
           title="Loading-friendly intake workspace"
-          description="Use this surface for question cards, transcript panels, autosave indicators, and validation banners."
+          description="Use this surface for question cards, transcript panels, autosave indicators, validation banners, and later section-level routing."
         />
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -58,9 +54,9 @@ export default function IntakeSessionPage({ params }: IntakeSessionPageProps) {
 
         <SessionActions
           primaryLabel="Continue to review"
-          primaryHref="/intake/review"
+          primaryHref={getIntakePath('review', sessionId)}
           secondaryLabel="Back to start"
-          secondaryHref="/intake/start"
+          secondaryHref={getIntakePath('start')}
         />
       </div>
     </PatientShell>

@@ -27,6 +27,15 @@ function stepClasses(status: ShellStep['status']) {
   }
 }
 
+function StepContent({ step, index }: { step: ShellStep; index: number }) {
+  return (
+    <>
+      <div className="text-xs font-semibold uppercase tracking-[0.2em]">Step {index + 1}</div>
+      <div className="mt-1 text-sm font-medium">{step.label}</div>
+    </>
+  );
+}
+
 export function PatientShell({
   eyebrow,
   title,
@@ -64,15 +73,23 @@ export function PatientShell({
 
           {steps && steps.length > 0 ? (
             <ol className="mb-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {steps.map((step, index) => (
-                <li
-                  key={`${step.label}-${index}`}
-                  className={`rounded-2xl border px-4 py-3 ${stepClasses(step.status)}`}
-                >
-                  <div className="text-xs font-semibold uppercase tracking-[0.2em]">Step {index + 1}</div>
-                  <div className="mt-1 text-sm font-medium">{step.label}</div>
-                </li>
-              ))}
+              {steps.map((step, index) => {
+                const className = `rounded-2xl border px-4 py-3 ${stepClasses(step.status)}`;
+
+                return (
+                  <li key={`${step.label}-${index}`}>
+                    {step.href ? (
+                      <Link href={step.href} className={`block transition hover:shadow-sm ${className}`}>
+                        <StepContent step={step} index={index} />
+                      </Link>
+                    ) : (
+                      <div className={className}>
+                        <StepContent step={step} index={index} />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ol>
           ) : null}
 

@@ -1,21 +1,32 @@
+import { buildIntakeSteps, getIntakePath, getSafeSessionId } from '@/components/intake-flow';
 import { PatientShell } from '@/components/patient-shell';
 import { SessionActions } from '@/components/session-actions';
 import { StateCard } from '@/components/state-card';
 
-const steps = [
-  { label: 'Start', status: 'complete' as const },
-  { label: 'Intake session', status: 'complete' as const },
-  { label: 'Review answers', status: 'complete' as const },
-  { label: 'Complete', status: 'current' as const },
-];
+type IntakeCompletePageProps = {
+  searchParams?: {
+    sessionId?: string;
+  };
+};
 
-export default function IntakeCompletePage() {
+export default function IntakeCompletePage({ searchParams }: IntakeCompletePageProps) {
+  const sessionId = getSafeSessionId(searchParams?.sessionId);
+
   return (
     <PatientShell
       eyebrow="Complete"
       title="You’re ready for the next step"
-      description="This page acts as the completion-state shell once intake is submitted or handed off to staff for confirmation."
-      steps={steps}
+      description="This page acts as the completion-state shell after intake submission or staff handoff, while keeping session context available for future confirmations."
+      steps={buildIntakeSteps('complete', sessionId)}
+      aside={
+        <div className="space-y-2 text-sm leading-6 text-slate-600">
+          <h2 className="text-base font-semibold text-slate-900">Completed session</h2>
+          <p>
+            Session reference: <span className="font-mono text-slate-900">{sessionId}</span>
+          </p>
+          <p>Confirmation details, wait-time updates, and shared-device reset behavior can plug in here later.</p>
+        </div>
+      }
     >
       <div className="space-y-6">
         <StateCard
@@ -32,9 +43,9 @@ export default function IntakeCompletePage() {
           </p>
           <SessionActions
             primaryLabel="Return to start"
-            primaryHref="/intake/start"
-            secondaryLabel="Review scaffold"
-            secondaryHref="/intake/review"
+            primaryHref={getIntakePath('start')}
+            secondaryLabel="Back to review"
+            secondaryHref={getIntakePath('review', sessionId)}
           />
         </div>
       </div>
