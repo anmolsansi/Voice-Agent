@@ -1,3 +1,4 @@
+import { ConsentSection } from '@/components/consent-section';
 import { DemographicsSection } from '@/components/demographics-section';
 import { buildIntakeSteps, getIntakePath } from '@/components/intake-flow';
 import { PatientShell } from '@/components/patient-shell';
@@ -18,7 +19,7 @@ export default function IntakeSessionPage({ params }: IntakeSessionPageProps) {
     <PatientShell
       eyebrow="In progress"
       title="Tell us about yourself and today’s visit"
-      description="Complete the frozen MVP intake fields for patient demographics, contact basics, and the visit reason / chief complaint section. Consent and submission wiring remain intentionally out of scope in this shell."
+      description="Complete the frozen MVP intake fields for patient demographics, visit reason, and consent / HIPAA acknowledgment using the existing manual intake shell. Submission wiring remains intentionally lightweight in this branch."
       steps={buildIntakeSteps('session', sessionId)}
       aside={
         <div className="space-y-3 text-sm leading-6 text-slate-600">
@@ -27,8 +28,9 @@ export default function IntakeSessionPage({ params }: IntakeSessionPageProps) {
             Session ID: <span className="font-mono text-slate-900">{sessionId}</span>
           </p>
           <p>
-            This step implements the frozen MVP demographics/contact fields plus visit reason.
-            Consent, HIPAA acknowledgements, and submission wiring remain intentionally out of scope here.
+            This step implements the frozen MVP demographics/contact, visit reason, and consent
+            sections. Required acknowledgments are visible here, while submission and backend save
+            wiring remain intentionally lightweight.
           </p>
         </div>
       }
@@ -36,12 +38,14 @@ export default function IntakeSessionPage({ params }: IntakeSessionPageProps) {
       <div className="space-y-6">
         <StateCard
           title="Patient flow shell preserved"
-          description="The demographics and visit reason sections plug into the existing session route, shared shell, and reusable field primitives without changing downstream review or completion routes."
+          description="The demographics, visit reason, and consent sections plug into the existing session route, shared shell, and reusable field primitives without changing downstream review or completion routes."
         />
 
         <DemographicsSection />
 
         <VisitReasonSection />
+
+        <ConsentSection />
 
         <SessionActions
           primaryLabel="Continue to review"
