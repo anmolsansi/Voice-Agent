@@ -13,7 +13,7 @@ type FieldChromeProps = FieldBaseProps & {
   children: ReactNode;
 };
 
-type TextFieldProps = FieldBaseProps & Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
+type TextFieldProps = FieldBaseProps & InputHTMLAttributes<HTMLInputElement>;
 
 type TextareaFieldProps = FieldBaseProps & TextareaHTMLAttributes<HTMLTextAreaElement>;
 
