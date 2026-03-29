@@ -12,6 +12,16 @@ class IntakeSessionStore {
     return this.sessions.get(sessionId) || null;
   }
 
+  getByPublicSessionId(publicSessionId) {
+    for (const session of this.sessions.values()) {
+      if (session.publicSessionId === publicSessionId) {
+        return session;
+      }
+    }
+
+    return null;
+  }
+
   list() {
     return Array.from(this.sessions.values());
   }

@@ -4,6 +4,7 @@ const { json } = require('../../http/response');
 const {
   createIntakeSession,
   intakeSessionStore,
+  loadIntakeSessionByPublicSessionId,
   saveFieldValue,
   serializeSession,
 } = require('./session-service');
@@ -18,6 +19,32 @@ function createIntakeRoutes() {
       items,
       total: items.length,
     });
+  });
+
+  router.get('/api/intake/sessions/resume', (request, response, context) => {
+    try {
+      const publicSessionId = context.url.searchParams.get('publicSessionId');
+      const session = loadIntakeSessionByPublicSessionId(publicSessionId);
+
+      return json(response, 200, { session });
+    } catch (error) {
+      const statusCode =
+        error.code === 'INVALID_PUBLIC_SESSION_ID'
+          ? 400
+          : error.code === 'SESSION_NOT_FOUND'
+            ? 404
+            : 500;
+
+      return json(response, statusCode, {
+        error:
+          statusCode === 404
+            ? 'Not found'
+            : statusCode === 500
+              ? 'Internal server error'
+              : 'Invalid request',
+        message: statusCode === 500 ? 'Unable to load intake session.' : error.message,
+      });
+    }
   });
 
   router.post('/api/intake/sessions', async (request, response) => {

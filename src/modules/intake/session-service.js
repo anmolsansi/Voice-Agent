@@ -172,6 +172,24 @@ function createIntakeSession(input = {}) {
   return serializeSession(session);
 }
 
+function loadIntakeSessionByPublicSessionId(publicSessionId) {
+  const normalizedPublicSessionId =
+    typeof publicSessionId === 'string' ? publicSessionId.trim() : '';
+
+  if (!normalizedPublicSessionId) {
+    throw createInputError('publicSessionId is required.', 'INVALID_PUBLIC_SESSION_ID');
+  }
+
+  const session = intakeSessionStore.getByPublicSessionId(normalizedPublicSessionId);
+  if (!session) {
+    const error = new Error('Intake session not found.');
+    error.code = 'SESSION_NOT_FOUND';
+    throw error;
+  }
+
+  return serializeSession(session);
+}
+
 function saveFieldValue(input = {}) {
   const sessionId = typeof input.sessionId === 'string' ? input.sessionId.trim() : '';
   const fieldKey = typeof input.fieldKey === 'string' ? input.fieldKey.trim() : '';
@@ -491,6 +509,7 @@ function serializeSession(session) {
     submittedAt: session.submittedAt,
     completionSummary: session.completionSummary,
     sections: session.sections,
+    fields: session.fields,
   };
 }
 
@@ -513,6 +532,7 @@ function createInputError(message, code) {
 module.exports = {
   createIntakeSession,
   intakeSessionStore,
+  loadIntakeSessionByPublicSessionId,
   saveFieldValue,
   serializeSession,
 };
