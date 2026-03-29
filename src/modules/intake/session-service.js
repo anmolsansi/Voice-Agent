@@ -266,6 +266,55 @@ function saveFieldValue(input = {}) {
   };
 }
 
+function submitIntakeSession(input = {}) {
+  const sessionId = typeof input.sessionId === 'string' ? input.sessionId.trim() : '';
+
+  if (!sessionId) {
+    throw createInputError('sessionId is required.', 'INVALID_SESSION_ID');
+  }
+
+  const session = intakeSessionStore.get(sessionId);
+  if (!session) {
+    const error = new Error('Intake session not found.');
+    error.code = 'SESSION_NOT_FOUND';
+    throw error;
+  }
+
+  const validationByField = recomputeSessionState(session);
+  const validation = buildSubmissionValidationSummary(session, validationByField);
+
+  if (!validation.isSubmittable) {
+    const error = new Error('Intake session is incomplete. Complete all required fields before submitting.');
+    error.code = 'SUBMISSION_BLOCKED';
+    error.details = validation;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  session.status = 'submitted';
+  session.submittedAt = now;
+  session.updatedAt = now;
+
+  const submission = {
+    submissionId: `submission_${randomUUID()}`,
+    sessionId: session.id,
+    submittedAt: now,
+    status: 'submitted',
+    payload: serializeSession(session),
+  };
+
+  intakeSessionStore.save(session);
+  intakeSessionStore.saveSubmission(submission);
+
+  return {
+    sessionId: session.id,
+    status: 'submitted',
+    submittedAt: now,
+    submissionId: submission.submissionId,
+    validation: buildSubmissionValidationSummary(session, validationByField),
+  };
+}
+
 function recomputeSessionState(session) {
   const validationByField = {};
   let completedFields = 0;
@@ -321,9 +370,36 @@ function recomputeSessionState(session) {
     completedFields,
     incompleteRequiredFields,
   };
-  session.status = 'active';
+
+  if (session.status !== 'submitted') {
+    session.status = 'active';
+  }
 
   return validationByField;
+}
+
+function buildSubmissionValidationSummary(session, validationByField) {
+  const fieldResults = Object.keys(FIELD_DEFINITIONS).map((fieldKey) => validationByField[fieldKey]);
+  const incompleteRequiredFields = fieldResults.filter((result) => result.blocking).map((result) => result.fieldKey);
+  const invalidFields = fieldResults
+    .filter((result) => !result.isValid && !isEmptyValue(session.fields[result.fieldKey] ? session.fields[result.fieldKey].value : null))
+    .map((result) => result.fieldKey);
+  const incompleteSections = session.sections
+    .filter((section) => section.incompleteRequiredFields.length > 0)
+    .map((section) => ({
+      key: section.key,
+      label: section.label,
+      incompleteRequiredFields: section.incompleteRequiredFields,
+    }));
+
+  return {
+    sessionId: session.id,
+    isSubmittable: incompleteRequiredFields.length === 0,
+    incompleteRequiredFields,
+    invalidFields,
+    incompleteSections,
+    fieldResults,
+  };
 }
 
 function getSectionIncompleteRequiredFields(section, validationByField) {
@@ -639,4 +715,5 @@ module.exports = {
   loadIntakeSessionByPublicSessionId,
   saveFieldValue,
   serializeSession,
+  submitIntakeSession,
 };

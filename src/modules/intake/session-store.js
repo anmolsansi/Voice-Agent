@@ -1,11 +1,21 @@
 class IntakeSessionStore {
   constructor() {
     this.sessions = new Map();
+    this.submissions = new Map();
   }
 
   save(session) {
     this.sessions.set(session.id, session);
     return session;
+  }
+
+  saveSubmission(submission) {
+    this.submissions.set(submission.sessionId, submission);
+    return submission;
+  }
+
+  getSubmission(sessionId) {
+    return this.submissions.get(sessionId) || null;
   }
 
   get(sessionId) {

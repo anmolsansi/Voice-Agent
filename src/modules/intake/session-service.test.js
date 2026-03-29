@@ -5,15 +5,28 @@ const {
   createIntakeSession,
   intakeSessionStore,
   saveFieldValue,
+  submitIntakeSession,
 } = require('./session-service');
 
 function resetStore() {
   intakeSessionStore.sessions.clear();
+  intakeSessionStore.submissions.clear();
 }
 
 function createSession() {
   resetStore();
   return createIntakeSession({ sourceMode: 'manual' });
+}
+
+function completeRequiredFields(sessionId) {
+  saveFieldValue({ sessionId, fieldKey: 'patient.firstName', value: '  Ada ', source: 'manual' });
+  saveFieldValue({ sessionId, fieldKey: 'patient.lastName', value: '  Lovelace ', source: 'manual' });
+  saveFieldValue({ sessionId, fieldKey: 'patient.dateOfBirth', value: '1990-04-20T18:30:00.000Z', source: 'manual' });
+  saveFieldValue({ sessionId, fieldKey: 'patient.phone', value: '(312) 555-0100', source: 'manual' });
+  saveFieldValue({ sessionId, fieldKey: 'patient.sexAtBirth', value: 'female', source: 'manual' });
+  saveFieldValue({ sessionId, fieldKey: 'visit.chiefComplaint', value: '  Sore throat for two days ', source: 'manual' });
+  saveFieldValue({ sessionId, fieldKey: 'consent.treatmentConsent', value: true, source: 'manual' });
+  saveFieldValue({ sessionId, fieldKey: 'consent.signatureName', value: ' Ada Lovelace ', source: 'manual' });
 }
 
 test('normalizes valid MVP fields and clears missing required summary state', () => {
@@ -83,4 +96,49 @@ test('rejects implausible dob, invalid chief complaint, and incomplete signature
   assert.equal(badSignature.validation.code, 'invalid_value');
   assert.equal(badSignature.validation.message, 'Signature name must include first and last name.');
   assert.deepEqual(badSignature.section.incompleteRequiredFields, ['consent.treatmentConsent', 'consent.signatureName']);
+});
+
+test('submits a complete session and stores an in-memory submission payload', () => {
+  const session = createSession();
+  completeRequiredFields(session.id);
+
+  const result = submitIntakeSession({ sessionId: session.id });
+
+  assert.equal(result.sessionId, session.id);
+  assert.equal(result.status, 'submitted');
+  assert.ok(result.submittedAt);
+  assert.ok(result.submissionId);
+  assert.equal(result.validation.isSubmittable, true);
+  assert.deepEqual(result.validation.incompleteRequiredFields, []);
+
+  const storedSession = intakeSessionStore.get(session.id);
+  assert.equal(storedSession.status, 'submitted');
+  assert.equal(storedSession.submittedAt, result.submittedAt);
+
+  const storedSubmission = intakeSessionStore.getSubmission(session.id);
+  assert.equal(storedSubmission.submissionId, result.submissionId);
+  assert.equal(storedSubmission.status, 'submitted');
+  assert.equal(storedSubmission.payload.status, 'submitted');
+  assert.equal(storedSubmission.payload.submittedAt, result.submittedAt);
+});
+
+test('blocks submission for incomplete sessions and reports missing fields and sections', () => {
+  const session = createSession();
+  saveFieldValue({ sessionId: session.id, fieldKey: 'patient.firstName', value: 'Ada', source: 'manual' });
+
+  assert.throws(
+    () => submitIntakeSession({ sessionId: session.id }),
+    (error) => {
+      assert.equal(error.code, 'SUBMISSION_BLOCKED');
+      assert.equal(error.details.isSubmittable, false);
+      assert.ok(error.details.incompleteRequiredFields.includes('patient.lastName'));
+      assert.ok(error.details.incompleteRequiredFields.includes('visit.chiefComplaint'));
+      assert.ok(error.details.incompleteRequiredFields.includes('consent.treatmentConsent'));
+      assert.deepEqual(
+        error.details.incompleteSections.map((section) => section.key),
+        ['demographics', 'visit_reason', 'consent'],
+      );
+      return true;
+    },
+  );
 });

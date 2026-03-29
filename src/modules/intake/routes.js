@@ -7,6 +7,7 @@ const {
   loadIntakeSessionByPublicSessionId,
   saveFieldValue,
   serializeSession,
+  submitIntakeSession,
 } = require('./session-service');
 
 function createIntakeRoutes() {
@@ -62,6 +63,40 @@ function createIntakeRoutes() {
       return json(response, statusCode, {
         error: statusCode === 500 ? 'Internal server error' : 'Invalid request',
         message: statusCode === 500 ? 'Unable to create intake session.' : error.message,
+      });
+    }
+  });
+
+  router.post('/api/intake/sessions/submit', async (request, response) => {
+    try {
+      const payload = await readJsonBody(request);
+      const result = submitIntakeSession(payload);
+
+      return json(response, 200, result);
+    } catch (error) {
+      const statusCode =
+        error.code === 'INVALID_SESSION_ID' || error.message === 'Request body must be valid JSON.'
+          ? 400
+          : error.code === 'SESSION_NOT_FOUND'
+            ? 404
+            : error.code === 'SUBMISSION_BLOCKED'
+              ? 409
+              : 500;
+
+      return json(response, statusCode, {
+        error:
+          statusCode === 404
+            ? 'Not found'
+            : statusCode === 409
+              ? 'Submission blocked'
+              : statusCode === 500
+                ? 'Internal server error'
+                : 'Invalid request',
+        message:
+          statusCode === 500
+            ? 'Unable to submit intake session.'
+            : error.message,
+        validation: error.details || null,
       });
     }
   });
