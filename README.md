@@ -83,6 +83,10 @@ Submission is blocked until all required fields are complete and valid.
 - Validation + state machine for required fields
 - Submission + audit logging
 
+#### Current backend endpoints
+- `GET /health` — service health/status
+- `POST /api/intake/sessions` — create a new intake session and return the canonical initial session payload
+
 ### Data
 - PostgreSQL
 - Tables for patients, intake_sessions, responses, validation_events, audit_logs
