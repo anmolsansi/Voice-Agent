@@ -8,6 +8,10 @@ class IntakeSessionStore {
     return session;
   }
 
+  get(sessionId) {
+    return this.sessions.get(sessionId) || null;
+  }
+
   list() {
     return Array.from(this.sessions.values());
   }
