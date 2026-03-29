@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { SessionActions } from '@/components/session-actions';
 import { StateCard } from '@/components/state-card';
-import { resumeIntakeSession, type IntakeSession } from '@/lib/intake-session';
+import { resumeIntakeSession, submitIntakeSession, type IntakeSession, type IntakeValidationSummary } from '@/lib/intake-session';
 
 type IntakeReviewScreenProps = {
   publicSessionId: string;
@@ -188,10 +189,78 @@ function getSectionHref(sessionHref: string, anchor: string) {
   return `${sessionHref}#${anchor}`;
 }
 
+function buildIssues(session: IntakeSession) {
+  const issues: ReviewIssue[] = [];
+
+  for (const field of REVIEW_FIELDS) {
+    if (field.isMissing(session)) {
+      issues.push({
+        key: field.key,
+        label: field.label,
+        sectionKey: field.sectionKey,
+        sectionLabel: field.sectionLabel,
+        anchor: field.anchor,
+        type: 'missing',
+        detail: `${field.label} is still required before submission.`,
+      });
+      continue;
+    }
+
+    if (field.isInvalid?.(session)) {
+      issues.push({
+        key: field.key,
+        label: field.label,
+        sectionKey: field.sectionKey,
+        sectionLabel: field.sectionLabel,
+        anchor: field.anchor,
+        type: 'invalid',
+        detail: field.invalidReason || `${field.label} needs attention.`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+function buildIssuesFromValidation(validation: IntakeValidationSummary | undefined, fallbackIssues: ReviewIssue[]) {
+  if (!validation) return fallbackIssues;
+
+  const seen = new Set<string>();
+  const validationIssues: ReviewIssue[] = [];
+
+  for (const fieldKey of [...validation.incompleteRequiredFields, ...validation.invalidFields]) {
+    if (seen.has(fieldKey)) continue;
+    seen.add(fieldKey);
+
+    const definition = REVIEW_FIELDS.find((field) => field.key === fieldKey);
+    const fieldResult = validation.fieldResults.find((result) => result.fieldKey === fieldKey);
+
+    validationIssues.push({
+      key: fieldKey,
+      label: definition?.label || fieldKey,
+      sectionKey: definition?.sectionKey || 'unknown',
+      sectionLabel: definition?.sectionLabel || 'Needs attention',
+      anchor: definition?.anchor || 'section-demographics',
+      type: validation.invalidFields.includes(fieldKey) ? 'invalid' : 'missing',
+      detail:
+        fieldResult?.message ||
+        (validation.invalidFields.includes(fieldKey)
+          ? `${definition?.label || fieldKey} needs attention before submission.`
+          : `${definition?.label || fieldKey} is still required before submission.`),
+    });
+  }
+
+  return validationIssues.length > 0 ? validationIssues : fallbackIssues;
+}
+
 export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref, startHref }: IntakeReviewScreenProps) {
+  const router = useRouter();
   const [session, setSession] = useState<IntakeSession | null>(null);
   const [loadingState, setLoadingState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
+  const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState('');
+  const [submitValidation, setSubmitValidation] = useState<IntakeValidationSummary | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -228,40 +297,52 @@ export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref,
       };
     }
 
-    const issues: ReviewIssue[] = [];
-
-    for (const field of REVIEW_FIELDS) {
-      if (field.isMissing(session)) {
-        issues.push({
-          key: field.key,
-          label: field.label,
-          sectionKey: field.sectionKey,
-          sectionLabel: field.sectionLabel,
-          anchor: field.anchor,
-          type: 'missing',
-          detail: `${field.label} is still required before submission.`,
-        });
-        continue;
-      }
-
-      if (field.isInvalid?.(session)) {
-        issues.push({
-          key: field.key,
-          label: field.label,
-          sectionKey: field.sectionKey,
-          sectionLabel: field.sectionLabel,
-          anchor: field.anchor,
-          type: 'invalid',
-          detail: field.invalidReason || `${field.label} needs attention.`,
-        });
-      }
-    }
+    const issues = buildIssues(session);
 
     return {
       issues,
       readyToSubmit: issues.length === 0 && session.completionSummary.incompleteRequiredFields === 0,
     };
   }, [session]);
+
+  const displayedIssues = useMemo(
+    () => buildIssuesFromValidation(submitValidation, reviewState.issues),
+    [reviewState.issues, submitValidation],
+  );
+
+  async function handleSubmit() {
+    if (!session || submitState === 'submitting') return;
+
+    try {
+      setSubmitState('submitting');
+      setSubmitError('');
+      setSubmitValidation(undefined);
+
+      const signatureName = getStringValue(session, 'consent.signatureName');
+      const result = await submitIntakeSession({
+        sessionId: session.publicSessionId,
+        signatureName,
+      });
+
+      const completeUrl = new URL(completeHref, window.location.origin);
+      completeUrl.searchParams.set('sessionId', result.sessionId || session.publicSessionId);
+
+      if (result.submissionId) {
+        completeUrl.searchParams.set('submissionId', result.submissionId);
+      }
+
+      if (result.submittedAt) {
+        completeUrl.searchParams.set('submittedAt', result.submittedAt);
+      }
+
+      router.push(`${completeUrl.pathname}${completeUrl.search}`);
+    } catch (error) {
+      const nextError = error as Error & { validation?: IntakeValidationSummary };
+      setSubmitError(nextError.message || 'Unable to submit intake session.');
+      setSubmitValidation(nextError.validation);
+      setSubmitState('error');
+    }
+  }
 
   if (loadingState === 'loading') {
     return <StateCard title="Loading review" description="Fetching the latest saved intake answers and completeness state." />;
@@ -282,7 +363,7 @@ export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref,
         title={reviewState.readyToSubmit ? 'Ready to submit' : 'Almost ready'}
         description={
           reviewState.readyToSubmit
-            ? 'All required intake answers are present and valid. Submission can be added next without changing this review flow.'
+            ? 'All required intake answers are present and valid. Submit when you are ready to complete check-in.'
             : 'Review the missing or invalid items below, then return to the matching section to finish intake.'
         }
         tone={reviewState.readyToSubmit ? 'success' : 'warning'}
@@ -290,19 +371,51 @@ export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref,
         <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.18em]">
           <span className="rounded-full bg-white/80 px-3 py-1 text-slate-700">Public ID: {session.publicSessionId}</span>
           <span className="rounded-full bg-white/80 px-3 py-1 text-slate-700">{session.completionSummary.completedFields} of {session.completionSummary.totalFields} fields complete</span>
-          <span className="rounded-full bg-white/80 px-3 py-1 text-slate-700">{reviewState.issues.length} issue{reviewState.issues.length === 1 ? '' : 's'} to fix</span>
+          <span className="rounded-full bg-white/80 px-3 py-1 text-slate-700">{displayedIssues.length} issue{displayedIssues.length === 1 ? '' : 's'} to fix</span>
           <span className="rounded-full bg-white/80 px-3 py-1 text-slate-700">Updated {new Date(session.updatedAt).toLocaleTimeString()}</span>
         </div>
       </StateCard>
 
+      {submitState === 'error' ? (
+        <StateCard
+          title="We couldn’t submit your intake yet"
+          description={submitError || 'Some information still needs attention before check-in can be completed.'}
+          tone="warning"
+        >
+          <div className="space-y-3">
+            <p className="text-sm leading-6 text-amber-900">
+              Please review the items below and return to the matching section to finish your check-in.
+            </p>
+            {displayedIssues.length > 0 ? (
+              <ul className="space-y-2 text-sm text-amber-900">
+                {displayedIssues.map((issue) => (
+                  <li key={`submit-error-${issue.key}`} className="flex flex-col gap-2 rounded-2xl border border-amber-200 bg-white/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-900">{issue.label}</p>
+                      <p className="text-slate-600">{issue.detail}</p>
+                    </div>
+                    <Link
+                      href={getSectionHref(sessionHref, issue.anchor)}
+                      className="inline-flex items-center justify-center rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 transition hover:border-amber-400"
+                    >
+                      Fix {issue.sectionLabel}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </StateCard>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="rounded-[28px] border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
           <h2 className="text-lg font-semibold text-slate-950">Required field summary</h2>
-          {reviewState.issues.length === 0 ? (
-            <p className="mt-3 text-sm leading-6 text-emerald-700">Every required field is satisfied. The patient can proceed once submission is implemented.</p>
+          {displayedIssues.length === 0 ? (
+            <p className="mt-3 text-sm leading-6 text-emerald-700">Every required field is satisfied. The patient can submit their intake now.</p>
           ) : (
             <ul className="mt-4 space-y-3">
-              {reviewState.issues.map((issue) => (
+              {displayedIssues.map((issue) => (
                 <li key={issue.key} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -327,8 +440,8 @@ export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref,
           <h2 className="text-lg font-semibold text-slate-950">Section status</h2>
           <div className="space-y-3">
             {session.sections.map((section) => {
-              const sectionIssues = reviewState.issues.filter((issue) => issue.sectionKey === section.key);
-              const isComplete = section.incompleteRequiredFields.length === 0;
+              const sectionIssues = displayedIssues.filter((issue) => issue.sectionKey === section.key);
+              const isComplete = sectionIssues.length === 0 && section.incompleteRequiredFields.length === 0;
               const anchor =
                 section.key === 'demographics'
                   ? 'section-demographics'
@@ -342,7 +455,7 @@ export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref,
                     <div>
                       <p className="text-sm font-semibold text-slate-900">{section.label}</p>
                       <p className="mt-1 text-sm text-slate-600">
-                        {isComplete ? 'Required fields complete.' : `${section.incompleteRequiredFields.length} required item${section.incompleteRequiredFields.length === 1 ? '' : 's'} still need attention.`}
+                        {isComplete ? 'Required fields complete.' : `${Math.max(section.incompleteRequiredFields.length, sectionIssues.length)} required item${Math.max(section.incompleteRequiredFields.length, sectionIssues.length) === 1 ? '' : 's'} still need attention.`}
                       </p>
                     </div>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${isComplete ? 'bg-white text-emerald-700' : 'bg-white text-amber-700'}`}>
@@ -379,7 +492,7 @@ export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref,
                 </div>
                 <dl className="mt-4 space-y-3 text-sm">
                   {fields.map((field) => {
-                    const issue = reviewState.issues.find((candidate) => candidate.key === field.key);
+                    const issue = displayedIssues.find((candidate) => candidate.key === field.key);
                     return (
                       <div key={field.key}>
                         <dt className="font-medium text-slate-500">{field.label}</dt>
@@ -397,18 +510,36 @@ export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref,
         </div>
       </section>
 
-      <SessionActions
-        primaryLabel={reviewState.readyToSubmit ? 'Continue to completion state' : 'Return to intake'}
-        primaryHref={reviewState.readyToSubmit ? completeHref : sessionHref}
-        secondaryLabel={reviewState.readyToSubmit ? 'Back to intake' : 'Back to start'}
-        secondaryHref={reviewState.readyToSubmit ? sessionHref : startHref}
-      />
+      <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-soft">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Submit intake</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              When everything looks right, submit this intake to finish check-in and receive a confirmation number.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={!reviewState.readyToSubmit || submitState === 'submitting'}
+            className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {submitState === 'submitting' ? 'Submitting…' : 'Submit intake'}
+          </button>
+        </div>
+        {!reviewState.readyToSubmit ? (
+          <p className="mt-3 text-sm text-slate-500">
+            Submission stays disabled until every required answer is complete and valid.
+          </p>
+        ) : null}
+      </div>
 
-      {!reviewState.readyToSubmit ? (
-        <p className="text-sm text-slate-500">
-          Submission is intentionally not implemented in this task. This review step only summarizes readiness and routes patients back to the section that needs attention.
-        </p>
-      ) : null}
+      <SessionActions
+        primaryLabel="Back to intake"
+        primaryHref={sessionHref}
+        secondaryLabel="Back to start"
+        secondaryHref={startHref}
+      />
     </div>
   );
 }

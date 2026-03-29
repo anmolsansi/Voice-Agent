@@ -33,6 +33,27 @@ export type IntakeSession = {
   fields: Record<string, IntakeFieldState>;
 };
 
+export type IntakeValidationSummary = {
+  sessionId: string;
+  isSubmittable: boolean;
+  incompleteRequiredFields: string[];
+  invalidFields: string[];
+  fieldResults: Array<{
+    fieldKey: string;
+    status: string;
+    message: string | null;
+    blocking: boolean;
+  }>;
+};
+
+export type SubmitIntakeResponse = {
+  sessionId: string;
+  status: 'submitted' | 'submission_blocked';
+  submittedAt: string | null;
+  submissionId: string | null;
+  validation: IntakeValidationSummary;
+};
+
 export async function createIntakeSession() {
   const response = await fetch('/api/intake/sessions', {
     method: 'POST',
@@ -93,6 +114,31 @@ export async function saveIntakeField(input: {
     section: IntakeSectionState;
     sessionStatus: string;
   }>;
+}
+
+export async function submitIntakeSession(input: { sessionId: string; signatureName: string }) {
+  const response = await fetch('/api/intake/sessions/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | (SubmitIntakeResponse & { message?: string })
+    | { message?: string; validation?: IntakeValidationSummary }
+    | null;
+
+  if (!response.ok) {
+    const error = new Error(payload?.message || 'Unable to submit intake session.') as Error & {
+      validation?: IntakeValidationSummary;
+    };
+    error.validation = payload?.validation;
+    throw error;
+  }
+
+  return payload as SubmitIntakeResponse;
 }
 
 export function getFieldStringValue(session: IntakeSession | null, fieldKey: string) {
