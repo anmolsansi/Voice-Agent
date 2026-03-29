@@ -48,7 +48,7 @@ export function VisitReasonSection({ values, sectionState, saveState, onFieldCha
   }
 
   return (
-    <div className="space-y-6">
+    <div id="section-visit-reason" className="space-y-6 scroll-mt-6">
       <StateCard
         title="Visit reason / chief complaint"
         description="This MVP section stays tightly focused on why the patient is here today. Required versus optional symptom details remain clear, and saved values come back when the session reloads."

@@ -66,7 +66,7 @@ export function ConsentSection({ values, sectionState, saveState, onFieldChange 
   }
 
   return (
-    <div className="space-y-6">
+    <div id="section-consent" className="space-y-6 scroll-mt-6">
       <StateCard
         title="Consent / HIPAA acknowledgment"
         description="This MVP section renders the frozen consent fields only. Required consents stay visually explicit, the signature stays lightweight, and the system-generated signing timestamp now comes back from the session API."

@@ -99,7 +99,7 @@ export function DemographicsSection({ values, sectionState, saveState, onFieldCh
   }
 
   return (
-    <div className="space-y-6">
+    <div id="section-demographics" className="space-y-6 scroll-mt-6">
       <StateCard
         title="Demographics / Contact basics"
         description="MVP fields are rendered from the frozen intake schema. Required items stay obvious, optional contact details stay lightweight, and conditional inputs only appear when relevant."
