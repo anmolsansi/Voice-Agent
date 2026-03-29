@@ -1,6 +1,6 @@
 import { buildIntakeSteps, getIntakePath, getSafeSessionId } from '@/components/intake-flow';
+import { IntakeStartCard } from '@/components/intake-start-card';
 import { PatientShell } from '@/components/patient-shell';
-import { SessionActions } from '@/components/session-actions';
 import { StateCard } from '@/components/state-card';
 
 const demoSessionId = getSafeSessionId();
@@ -27,19 +27,7 @@ export default function IntakeStartPage() {
         />
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 p-5">
-            <h2 className="text-lg font-semibold text-slate-900">Intake flow entry</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              A later implementation can create a real session here, confirm accessibility or language preferences,
-              and decide whether the patient enters a voice-first or manual-first experience.
-            </p>
-            <SessionActions
-              primaryLabel="Start intake"
-              primaryHref={getIntakePath('session', demoSessionId)}
-              secondaryLabel="Preview review route"
-              secondaryHref={getIntakePath('review', demoSessionId)}
-            />
-          </div>
+          <IntakeStartCard reviewHref={getIntakePath('review', demoSessionId)} />
 
           <StateCard
             title="Shell-level only"
