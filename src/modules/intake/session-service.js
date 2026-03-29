@@ -19,7 +19,7 @@ const SECTION_DEFINITIONS = [
       'patient.lastName',
       'patient.dateOfBirth',
       'patient.sexAtBirth',
-      'patient.phone',
+      'patient.contact',
     ],
     fields: [
       'patient.firstName',
@@ -55,12 +55,7 @@ const SECTION_DEFINITIONS = [
   {
     key: 'consent',
     label: 'Consent',
-    requiredFields: [
-      'consent.treatmentConsent',
-      'consent.hipaaAcknowledgment',
-      'consent.signatureName',
-      'consent.signedAt',
-    ],
+    requiredFields: ['consent.treatmentConsent', 'consent.signatureName'],
     fields: [
       'consent.treatmentConsent',
       'consent.hipaaAcknowledgment',
@@ -72,50 +67,54 @@ const SECTION_DEFINITIONS = [
 ];
 
 const FIELD_DEFINITIONS = {
-  'patient.firstName': { type: 'string', required: true },
-  'patient.lastName': { type: 'string', required: true },
-  'patient.dateOfBirth': { type: 'date', required: true },
+  'patient.firstName': { type: 'string', required: true, label: 'First name' },
+  'patient.lastName': { type: 'string', required: true, label: 'Last name' },
+  'patient.dateOfBirth': { type: 'date', required: true, label: 'Date of birth' },
   'patient.sexAtBirth': {
     type: 'enum',
     required: true,
+    label: 'Sex at birth',
     allowedValues: ['female', 'male', 'intersex', 'prefer_not_to_say', 'self_describe'],
   },
-  'patient.genderIdentity': { type: 'string', required: false },
-  'patient.phone': { type: 'phone', required: true },
-  'patient.email': { type: 'email', required: false },
-  'patient.addressLine1': { type: 'string', required: false },
-  'patient.addressLine2': { type: 'string', required: false },
-  'patient.city': { type: 'string', required: false },
-  'patient.state': { type: 'string', required: false },
-  'patient.postalCode': { type: 'string', required: false },
-  'patient.preferredLanguage': { type: 'string', required: false },
+  'patient.genderIdentity': { type: 'string', required: false, label: 'Gender identity' },
+  'patient.phone': { type: 'phone', required: false, label: 'Phone number' },
+  'patient.email': { type: 'email', required: false, label: 'Email address' },
+  'patient.addressLine1': { type: 'string', required: false, label: 'Address line 1' },
+  'patient.addressLine2': { type: 'string', required: false, label: 'Address line 2' },
+  'patient.city': { type: 'string', required: false, label: 'City' },
+  'patient.state': { type: 'string', required: false, label: 'State' },
+  'patient.postalCode': { type: 'string', required: false, label: 'Postal code' },
+  'patient.preferredLanguage': { type: 'string', required: false, label: 'Preferred language' },
   'patient.sexAtBirthSelfDescribe': {
     type: 'string',
     required: false,
+    label: 'Describe sex at birth',
     dependsOn: { fieldKey: 'patient.sexAtBirth', value: 'self_describe' },
   },
-  'visit.chiefComplaint': { type: 'string', required: true, maxLength: 500 },
-  'visit.symptomDuration': { type: 'string', required: false },
-  'visit.painPresent': { type: 'boolean', required: false },
+  'visit.chiefComplaint': { type: 'string', required: true, maxLength: 500, label: 'Chief complaint' },
+  'visit.symptomDuration': { type: 'string', required: false, label: 'Symptom duration' },
+  'visit.painPresent': { type: 'boolean', required: false, label: 'Pain present' },
   'visit.painScore': {
     type: 'integer',
     required: false,
+    label: 'Pain score',
     dependsOn: { fieldKey: 'visit.painPresent', value: true },
     min: 0,
     max: 10,
   },
-  'visit.feverPresent': { type: 'boolean', required: false },
-  'visit.injuryRelated': { type: 'boolean', required: false },
+  'visit.feverPresent': { type: 'boolean', required: false, label: 'Fever present' },
+  'visit.injuryRelated': { type: 'boolean', required: false, label: 'Injury related' },
   'visit.workRelatedInjury': {
     type: 'boolean',
     required: false,
+    label: 'Work-related injury',
     dependsOn: { fieldKey: 'visit.injuryRelated', value: true },
   },
-  'consent.treatmentConsent': { type: 'booleanTrue', required: true },
-  'consent.hipaaAcknowledgment': { type: 'booleanTrue', required: true },
-  'consent.financialResponsibility': { type: 'boolean', required: false },
-  'consent.signatureName': { type: 'string', required: true },
-  'consent.signedAt': { type: 'datetime', required: true, systemGenerated: true },
+  'consent.treatmentConsent': { type: 'booleanTrue', required: true, label: 'Consent acknowledgment' },
+  'consent.hipaaAcknowledgment': { type: 'booleanTrue', required: false, label: 'HIPAA acknowledgment' },
+  'consent.financialResponsibility': { type: 'boolean', required: false, label: 'Financial responsibility' },
+  'consent.signatureName': { type: 'signatureName', required: true, label: 'Signature name' },
+  'consent.signedAt': { type: 'datetime', required: false, systemGenerated: true, label: 'Signed at' },
 };
 
 const FIELD_TO_SECTION = Object.fromEntries(
@@ -227,15 +226,19 @@ function saveFieldValue(input = {}) {
 
   session.fields[fieldKey] = fieldState;
 
-  if (fieldKey === 'consent.signatureName' && typeof normalizedValue === 'string' && normalizedValue) {
-    session.fields['consent.signedAt'] = {
-      fieldKey: 'consent.signedAt',
-      value: now,
-      displayValue: now,
-      completionState: COMPLETION_STATES.COMPLETE,
-      lastUpdatedAt: now,
-      lastUpdatedBySource: 'system',
-    };
+  if (fieldKey === 'consent.signatureName') {
+    if (typeof normalizedValue === 'string' && normalizedValue) {
+      session.fields['consent.signedAt'] = {
+        fieldKey: 'consent.signedAt',
+        value: now,
+        displayValue: now,
+        completionState: COMPLETION_STATES.COMPLETE,
+        lastUpdatedAt: now,
+        lastUpdatedBySource: 'system',
+      };
+    } else {
+      clearField(session, 'consent.signedAt');
+    }
   }
 
   if (fieldKey === 'patient.sexAtBirth' && normalizedValue !== 'self_describe') {
@@ -298,9 +301,7 @@ function recomputeSessionState(session) {
     const sectionCompletedFields = sectionValidations.filter(
       ({ field }) => field && field.completionState === COMPLETION_STATES.COMPLETE,
     ).length;
-    const sectionIncompleteRequiredFields = sectionValidations
-      .filter(({ validation }) => validation.blocking)
-      .map(({ fieldKey }) => fieldKey);
+    const sectionIncompleteRequiredFields = getSectionIncompleteRequiredFields(section, validationByField);
 
     return {
       key: section.key,
@@ -323,6 +324,25 @@ function recomputeSessionState(session) {
   session.status = 'active';
 
   return validationByField;
+}
+
+function getSectionIncompleteRequiredFields(section, validationByField) {
+  if (section.key === 'demographics') {
+    const incomplete = [
+      'patient.firstName',
+      'patient.lastName',
+      'patient.dateOfBirth',
+      'patient.sexAtBirth',
+    ].filter((fieldKey) => validationByField[fieldKey].blocking);
+
+    if (validationByField['patient.phone'].blocking || validationByField['patient.email'].blocking) {
+      incomplete.push('patient.contact');
+    }
+
+    return incomplete;
+  }
+
+  return section.requiredFields.filter((fieldKey) => validationByField[fieldKey]?.blocking);
 }
 
 function deriveSectionCompletionState(totalFields, completedFields, incompleteRequiredFields) {
@@ -357,8 +377,12 @@ function validateFieldValue(fieldKey, value, session) {
     return validationResult(fieldKey, true, 'ok', null, false);
   }
 
+  if (fieldKey === 'patient.phone' || fieldKey === 'patient.email') {
+    return validateContactField(fieldKey, value, session);
+  }
+
   if (definition.required && isEmptyValue(value)) {
-    return validationResult(fieldKey, false, 'required_missing', 'This field is required.', true);
+    return validationResult(fieldKey, false, 'required_missing', `${definition.label} is required.`, true);
   }
 
   if (!definition.required && isEmptyValue(value)) {
@@ -368,23 +392,51 @@ function validateFieldValue(fieldKey, value, session) {
   switch (definition.type) {
     case 'string': {
       if (typeof value !== 'string' || !value.trim()) {
-        return validationResult(fieldKey, false, 'invalid_value', 'Value must be a non-empty string.', Boolean(definition.required));
+        return validationResult(fieldKey, false, 'invalid_value', `${definition.label} must be a non-empty value.`, Boolean(definition.required));
       }
 
       if (definition.maxLength && value.trim().length > definition.maxLength) {
-        return validationResult(fieldKey, false, 'invalid_value', `Value must be ${definition.maxLength} characters or less.`, Boolean(definition.required));
+        return validationResult(fieldKey, false, 'invalid_value', `${definition.label} must be ${definition.maxLength} characters or less.`, Boolean(definition.required));
+      }
+
+      return validationResult(fieldKey, true, 'ok', null, false);
+    }
+    case 'signatureName': {
+      if (typeof value !== 'string' || !value.trim()) {
+        return validationResult(fieldKey, false, 'invalid_value', 'Signature name is required.', true);
+      }
+
+      if (!value.trim().includes(' ')) {
+        return validationResult(fieldKey, false, 'invalid_value', 'Signature name must include first and last name.', true);
       }
 
       return validationResult(fieldKey, true, 'ok', null, false);
     }
     case 'date': {
-      const date = new Date(value);
-      if (typeof value !== 'string' || Number.isNaN(date.getTime())) {
-        return validationResult(fieldKey, false, 'invalid_format', 'Value must be a valid date.', Boolean(definition.required));
+      if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return validationResult(fieldKey, false, 'invalid_format', `${definition.label} must be a valid date in YYYY-MM-DD format.`, Boolean(definition.required));
       }
 
-      if (date.getTime() >= Date.now()) {
+      const date = new Date(`${value}T00:00:00.000Z`);
+      if (Number.isNaN(date.getTime())) {
+        return validationResult(fieldKey, false, 'invalid_format', `${definition.label} must be a valid calendar date.`, Boolean(definition.required));
+      }
+
+      if (date.toISOString().slice(0, 10) !== value) {
+        return validationResult(fieldKey, false, 'invalid_format', `${definition.label} must be a valid calendar date.`, Boolean(definition.required));
+      }
+
+      const today = new Date();
+      const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+      if (date.getTime() >= todayUtc) {
         return validationResult(fieldKey, false, 'invalid_value', 'Date of birth must be in the past.', true);
+      }
+
+      const maxAgeYears = 120;
+      const oldestAllowed = new Date(todayUtc);
+      oldestAllowed.setUTCFullYear(oldestAllowed.getUTCFullYear() - maxAgeYears);
+      if (date < oldestAllowed) {
+        return validationResult(fieldKey, false, 'invalid_value', 'Date of birth must be within a plausible age range.', true);
       }
 
       return validationResult(fieldKey, true, 'ok', null, false);
@@ -392,14 +444,14 @@ function validateFieldValue(fieldKey, value, session) {
     case 'datetime': {
       const date = new Date(value);
       if (typeof value !== 'string' || Number.isNaN(date.getTime())) {
-        return validationResult(fieldKey, false, 'invalid_format', 'Value must be a valid datetime.', Boolean(definition.required));
+        return validationResult(fieldKey, false, 'invalid_format', `${definition.label} must be a valid datetime.`, Boolean(definition.required));
       }
 
       return validationResult(fieldKey, true, 'ok', null, false);
     }
     case 'phone': {
       if (typeof value !== 'string' || !/^\+1\d{10}$/.test(value)) {
-        return validationResult(fieldKey, false, 'invalid_format', 'Phone number must be in normalized +1XXXXXXXXXX format.', true);
+        return validationResult(fieldKey, false, 'invalid_format', 'Phone number must be a valid US number in normalized +1XXXXXXXXXX format.', true);
       }
 
       return validationResult(fieldKey, true, 'ok', null, false);
@@ -413,36 +465,77 @@ function validateFieldValue(fieldKey, value, session) {
     }
     case 'enum': {
       if (!definition.allowedValues.includes(value)) {
-        return validationResult(fieldKey, false, 'invalid_value', 'Value must match an allowed option.', true);
+        return validationResult(fieldKey, false, 'invalid_value', `${definition.label} must match an allowed option.`, true);
       }
 
       return validationResult(fieldKey, true, 'ok', null, false);
     }
     case 'integer': {
       if (!Number.isInteger(value)) {
-        return validationResult(fieldKey, false, 'invalid_format', 'Value must be an integer.', false);
+        return validationResult(fieldKey, false, 'invalid_format', `${definition.label} must be an integer.`, false);
       }
 
       if (value < definition.min || value > definition.max) {
-        return validationResult(fieldKey, false, 'invalid_value', `Value must be between ${definition.min} and ${definition.max}.`, false);
+        return validationResult(fieldKey, false, 'invalid_value', `${definition.label} must be between ${definition.min} and ${definition.max}.`, false);
       }
 
       return validationResult(fieldKey, true, 'ok', null, false);
     }
     case 'boolean': {
       if (typeof value !== 'boolean') {
-        return validationResult(fieldKey, false, 'invalid_format', 'Value must be a boolean.', false);
+        return validationResult(fieldKey, false, 'invalid_format', `${definition.label} must be a boolean.`, false);
       }
 
       return validationResult(fieldKey, true, 'ok', null, false);
     }
     case 'booleanTrue': {
       if (value !== true) {
-        return validationResult(fieldKey, false, 'invalid_value', 'This acknowledgment must be accepted.', true);
+        return validationResult(fieldKey, false, 'invalid_value', `${definition.label} must be accepted.`, true);
       }
 
       return validationResult(fieldKey, true, 'ok', null, false);
     }
+    default:
+      return validationResult(fieldKey, false, 'server_rejected', 'Unsupported field definition.', true);
+  }
+}
+
+function validateContactField(fieldKey, value, session) {
+  const otherFieldKey = fieldKey === 'patient.phone' ? 'patient.email' : 'patient.phone';
+  const otherValue = session.fields[otherFieldKey] ? session.fields[otherFieldKey].value : null;
+  const hasOtherContact = !isEmptyValue(otherValue);
+
+  if (isEmptyValue(value)) {
+    if (!hasOtherContact) {
+      return validationResult(
+        fieldKey,
+        false,
+        'required_missing',
+        'At least one contact method is required: provide a phone number or email address.',
+        true,
+      );
+    }
+
+    return validationResult(fieldKey, true, 'ok', null, false);
+  }
+
+  return validateFieldValueByType(fieldKey, value);
+}
+
+function validateFieldValueByType(fieldKey, value) {
+  const definition = FIELD_DEFINITIONS[fieldKey];
+
+  switch (definition.type) {
+    case 'phone':
+      if (typeof value !== 'string' || !/^\+1\d{10}$/.test(value)) {
+        return validationResult(fieldKey, false, 'invalid_format', 'Phone number must be a valid US number in normalized +1XXXXXXXXXX format.', true);
+      }
+      return validationResult(fieldKey, true, 'ok', null, false);
+    case 'email':
+      if (typeof value !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        return validationResult(fieldKey, false, 'invalid_format', 'Email address must be valid.', true);
+      }
+      return validationResult(fieldKey, true, 'ok', null, false);
     default:
       return validationResult(fieldKey, false, 'server_rejected', 'Unsupported field definition.', true);
   }
@@ -469,6 +562,17 @@ function normalizeValue(fieldKey, value) {
       if (digits.length === 11 && digits.startsWith('1')) {
         return `+${digits}`;
       }
+    }
+
+    if (definition.type === 'date') {
+      const parsedDate = new Date(trimmed);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString().slice(0, 10);
+      }
+    }
+
+    if (definition.type === 'email') {
+      return trimmed.toLowerCase();
     }
 
     return trimmed;
