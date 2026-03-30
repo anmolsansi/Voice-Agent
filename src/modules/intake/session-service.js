@@ -172,6 +172,10 @@ function createIntakeSession(input = {}) {
 }
 
 function loadIntakeSessionByPublicSessionId(publicSessionId) {
+  return serializeSession(getIntakeSessionByPublicSessionId(publicSessionId));
+}
+
+function getIntakeSessionByPublicSessionId(publicSessionId) {
   const normalizedPublicSessionId =
     typeof publicSessionId === 'string' ? publicSessionId.trim() : '';
 
@@ -186,7 +190,7 @@ function loadIntakeSessionByPublicSessionId(publicSessionId) {
     throw error;
   }
 
-  return serializeSession(session);
+  return session;
 }
 
 function saveFieldValue(input = {}) {
@@ -711,6 +715,7 @@ function createInputError(message, code) {
 
 module.exports = {
   createIntakeSession,
+  getIntakeSessionByPublicSessionId,
   intakeSessionStore,
   loadIntakeSessionByPublicSessionId,
   saveFieldValue,

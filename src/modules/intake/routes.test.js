@@ -51,6 +51,15 @@ async function saveField(baseUrl, sessionId, fieldKey, value) {
   assert.equal(response.status, 200);
 }
 
+function decodePdfText(buffer) {
+  const content = buffer.toString('latin1');
+  const hexChunks = content.match(/<([0-9A-Fa-f]+)>/g) || [];
+
+  return hexChunks
+    .map((chunk) => Buffer.from(chunk.slice(1, -1), 'hex').toString('latin1'))
+    .join(' ');
+}
+
 test('POST /api/intake/sessions/submit returns success for a complete session', async () => {
   resetStore();
   const { server, baseUrl } = await startTestServer();
@@ -109,6 +118,50 @@ test('POST /api/intake/sessions/submit returns clear validation details for an i
       payload.validation.incompleteSections.map((section) => section.key),
       ['demographics', 'visit_reason', 'consent'],
     );
+  } finally {
+    await stopTestServer(server);
+  }
+});
+
+test('GET /api/intake/sessions/:publicSessionId/pdf returns a PDF summary for a submitted session', async () => {
+  resetStore();
+  const { server, baseUrl } = await startTestServer();
+
+  try {
+    const session = await createSession(baseUrl);
+
+    await saveField(baseUrl, session.id, 'patient.firstName', 'Ada');
+    await saveField(baseUrl, session.id, 'patient.lastName', 'Lovelace');
+    await saveField(baseUrl, session.id, 'patient.dateOfBirth', '1990-04-20');
+    await saveField(baseUrl, session.id, 'patient.phone', '(312) 555-0100');
+    await saveField(baseUrl, session.id, 'patient.sexAtBirth', 'female');
+    await saveField(baseUrl, session.id, 'visit.chiefComplaint', 'Sore throat');
+    await saveField(baseUrl, session.id, 'consent.treatmentConsent', true);
+    await saveField(baseUrl, session.id, 'consent.signatureName', 'Ada Lovelace');
+
+    const submitResponse = await fetch(`${baseUrl}/api/intake/sessions/submit`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sessionId: session.id }),
+    });
+    const submitPayload = await submitResponse.json();
+
+    assert.equal(submitResponse.status, 200);
+
+    const response = await fetch(`${baseUrl}/api/intake/sessions/${session.publicSessionId}/pdf`);
+    const pdfBuffer = Buffer.from(await response.arrayBuffer());
+    const decodedPdfText = decodePdfText(pdfBuffer);
+    const normalizedPdfText = decodedPdfText.replace(/\s+/g, '').toLowerCase();
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'application/pdf');
+    assert.match(response.headers.get('content-disposition'), /inline; filename=".*-summary\.pdf"/);
+    assert.match(normalizedPdfText, /checkincareintakesummary/);
+    assert.match(normalizedPdfText, /adalovelace/);
+    assert.match(normalizedPdfText, /sorethroat/);
+    assert.match(normalizedPdfText, /treatmentconsentconfirmed:yes/);
+    assert.match(normalizedPdfText, /submissiontimestamp:/);
+    assert.match(normalizedPdfText, new RegExp(submitPayload.submittedAt.slice(0, 4)));
   } finally {
     await stopTestServer(server);
   }

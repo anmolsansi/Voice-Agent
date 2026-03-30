@@ -1,8 +1,10 @@
 const { readJsonBody } = require('../../http/request');
 const { createRouter } = require('../../http/router');
-const { json } = require('../../http/response');
+const { json, send } = require('../../http/response');
+const { generateIntakeSessionPdf } = require('./pdf-summary');
 const {
   createIntakeSession,
+  getIntakeSessionByPublicSessionId,
   intakeSessionStore,
   loadIntakeSessionByPublicSessionId,
   saveFieldValue,
@@ -97,6 +99,43 @@ function createIntakeRoutes() {
             ? 'Unable to submit intake session.'
             : error.message,
         validation: error.details || null,
+      });
+    }
+  });
+
+  router.get('/api/intake/sessions/:publicSessionId/pdf', async (_request, response, context) => {
+    try {
+      const session = getIntakeSessionByPublicSessionId(context.params.publicSessionId);
+
+      if (session.status !== 'submitted' || !session.submittedAt) {
+        return json(response, 409, {
+          error: 'Session not submitted',
+          message: 'PDF summary is only available after the intake session has been submitted.',
+        });
+      }
+
+      const pdfBuffer = await generateIntakeSessionPdf(session);
+
+      return send(response, 200, pdfBuffer, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${session.publicSessionId}-summary.pdf"`,
+      });
+    } catch (error) {
+      const statusCode =
+        error.code === 'INVALID_PUBLIC_SESSION_ID'
+          ? 400
+          : error.code === 'SESSION_NOT_FOUND'
+            ? 404
+            : 500;
+
+      return json(response, statusCode, {
+        error:
+          statusCode === 404
+            ? 'Not found'
+            : statusCode === 500
+              ? 'Internal server error'
+              : 'Invalid request',
+        message: statusCode === 500 ? 'Unable to generate intake PDF summary.' : error.message,
       });
     }
   });
