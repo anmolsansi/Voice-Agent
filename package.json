@@ -3,10 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run dev:frontend",
+    "dev:frontend": "next dev --hostname 0.0.0.0 --port ${FRONTEND_PORT:-3000}",
+    "dev:backend": "node src/server.js",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "npm run start:frontend",
+    "start:frontend": "next start --hostname 0.0.0.0 --port ${FRONTEND_PORT:-3000}",
+    "start:backend": "node src/server.js",
+    "lint": "next lint",
+    "test": "node --test src/modules/**/*.test.js",
+    "db:migrate": "node db/run-migrations.cjs up",
+    "db:rollback": "node db/run-migrations.cjs down",
+    "db:rollback:all": "node db/run-migrations.cjs down-all",
+    "db:create": "node-pg-migrate create --migrations-dir db/migrations --migration-file-language js"
   },
   "dependencies": {
     "dotenv": "^17.3.1",
@@ -27,6 +36,7 @@
     "eslint-config-next": "14.2.30",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "node-pg-migrate": "^8.0.3"
   }
 }

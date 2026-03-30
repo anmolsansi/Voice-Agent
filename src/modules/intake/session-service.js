@@ -273,13 +273,25 @@ async function saveFieldValue(input = {}) {
 }
 
 async function submitIntakeSession(input = {}) {
+  const publicSessionId = typeof input.publicSessionId === 'string' ? input.publicSessionId.trim() : '';
   const sessionId = typeof input.sessionId === 'string' ? input.sessionId.trim() : '';
 
-  if (!sessionId) {
-    throw createInputError('sessionId is required.', 'INVALID_SESSION_ID');
+  if (!publicSessionId && !sessionId) {
+    throw createInputError('publicSessionId is required.', 'INVALID_PUBLIC_SESSION_ID');
   }
 
-  const session = await intakeSessionStore.get(sessionId);
+  let session = null;
+
+  if (publicSessionId) {
+    session = await getIntakeSessionByPublicSessionId(publicSessionId);
+  } else {
+    session = await intakeSessionStore.get(sessionId);
+
+    if (!session && sessionId) {
+      session = await intakeSessionStore.getByPublicSessionId(sessionId);
+    }
+  }
+
   if (!session) {
     const error = new Error('Intake session not found.');
     error.code = 'SESSION_NOT_FOUND';
@@ -313,7 +325,7 @@ async function submitIntakeSession(input = {}) {
   await intakeSessionStore.saveSubmission(submission);
 
   return {
-    sessionId: session.id,
+    publicSessionId: session.publicSessionId,
     status: 'submitted',
     submittedAt: now,
     submissionId: submission.submissionId,
@@ -426,7 +438,7 @@ function buildSubmissionValidationSummary(session, validationByField) {
     }));
 
   return {
-    sessionId: session.id,
+    publicSessionId: session.publicSessionId,
     isSubmittable: incompleteRequiredFields.length === 0,
     incompleteRequiredFields,
     invalidFields,
