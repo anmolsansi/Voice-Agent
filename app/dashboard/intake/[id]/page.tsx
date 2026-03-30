@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { StaffReviewPanel } from '@/components/staff-review-panel';
 import {
   formatCompletionSummary,
   formatSessionDateTime,
@@ -64,6 +65,10 @@ export default async function IntakeDetailPage({
               <dd>{formatSessionDateTime(session.updatedAt)}</dd>
             </div>
             <div>
+              <dt className="text-slate-500">Reviewed</dt>
+              <dd>{formatSessionDateTime(session.reviewedAt)}</dd>
+            </div>
+            <div>
               <dt className="text-slate-500">Completion</dt>
               <dd>{formatCompletionSummary(session)}</dd>
             </div>
@@ -99,6 +104,10 @@ export default async function IntakeDetailPage({
             </div>
           </dl>
         </article>
+      </section>
+
+      <section>
+        <StaffReviewPanel session={session} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">

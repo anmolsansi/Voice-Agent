@@ -122,6 +122,46 @@ test('POST /api/intake/sessions/submit returns clear validation details for an i
   }
 });
 
+test('POST /api/staff/sessions/:publicSessionId/review marks a submitted session reviewed', async () => {
+  resetStore();
+  const { server, baseUrl } = await startTestServer();
+
+  try {
+    const session = await createSession(baseUrl);
+
+    await saveField(baseUrl, session.id, 'patient.firstName', 'Ada');
+    await saveField(baseUrl, session.id, 'patient.lastName', 'Lovelace');
+    await saveField(baseUrl, session.id, 'patient.dateOfBirth', '1990-04-20');
+    await saveField(baseUrl, session.id, 'patient.phone', '(312) 555-0100');
+    await saveField(baseUrl, session.id, 'patient.sexAtBirth', 'female');
+    await saveField(baseUrl, session.id, 'visit.chiefComplaint', 'Sore throat');
+    await saveField(baseUrl, session.id, 'consent.treatmentConsent', true);
+    await saveField(baseUrl, session.id, 'consent.signatureName', 'Ada Lovelace');
+
+    const submitResponse = await fetch(`${baseUrl}/api/intake/sessions/submit`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sessionId: session.id }),
+    });
+
+    assert.equal(submitResponse.status, 200);
+
+    const response = await fetch(`${baseUrl}/api/staff/sessions/${session.publicSessionId}/review`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ notes: 'Ready for staff callback.' }),
+    });
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.session.status, 'reviewed');
+    assert.equal(payload.session.reviewNotes, 'Ready for staff callback.');
+    assert.ok(payload.session.reviewedAt);
+  } finally {
+    await stopTestServer(server);
+  }
+});
+
 test('GET /api/intake/sessions/:publicSessionId/pdf returns a PDF summary for a submitted session', async () => {
   resetStore();
   const { server, baseUrl } = await startTestServer();

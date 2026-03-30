@@ -91,6 +91,10 @@ export function formatCompletionSummary(session: IntakeSession) {
 }
 
 export function getStatusTone(status: string) {
+  if (status === 'reviewed') {
+    return 'bg-cyan-500/15 text-cyan-200 border-cyan-500/30';
+  }
+
   return status === 'submitted'
     ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30'
     : 'bg-amber-500/15 text-amber-200 border-amber-500/30';

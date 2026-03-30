@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const {
   createIntakeSession,
   intakeSessionStore,
+  reviewIntakeSessionByPublicSessionId,
   saveFieldValue,
   submitIntakeSession,
 } = require('./session-service');
@@ -140,4 +141,24 @@ test('blocks submission for incomplete sessions and reports missing fields and s
       return true;
     },
   );
+});
+
+test('marks a submitted session reviewed and stores optional notes', async () => {
+  const session = await createSession();
+  await completeRequiredFields(session.id);
+  await submitIntakeSession({ sessionId: session.id });
+
+  const reviewedSession = await reviewIntakeSessionByPublicSessionId({
+    publicSessionId: session.publicSessionId,
+    notes: 'Patient ready for nurse follow-up.',
+  });
+
+  assert.equal(reviewedSession.status, 'reviewed');
+  assert.ok(reviewedSession.reviewedAt);
+  assert.equal(reviewedSession.reviewNotes, 'Patient ready for nurse follow-up.');
+
+  const storedSession = await intakeSessionStore.get(session.id);
+  assert.equal(storedSession.status, 'reviewed');
+  assert.equal(storedSession.reviewNotes, 'Patient ready for nurse follow-up.');
+  assert.equal(storedSession.reviewedAt, reviewedSession.reviewedAt);
 });

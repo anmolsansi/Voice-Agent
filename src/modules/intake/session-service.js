@@ -328,7 +328,7 @@ async function reviewIntakeSessionByPublicSessionId(input = {}) {
     throw createInputError('publicSessionId is required.', 'INVALID_PUBLIC_SESSION_ID');
   }
 
-  const session = getIntakeSessionByPublicSessionId(publicSessionId);
+  const session = await getIntakeSessionByPublicSessionId(publicSessionId);
 
   if (session.status !== 'submitted' && session.status !== 'reviewed') {
     const error = new Error('Only submitted sessions can be marked reviewed.');
