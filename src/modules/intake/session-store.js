@@ -1,4 +1,8 @@
-const { query } = require('../../lib/db/postgres');
+const {
+  createPersistenceError,
+  isMemoryFallbackAllowed,
+  query,
+} = require('../../lib/db/postgres');
 
 class InMemorySessionStore {
   constructor() {
@@ -57,6 +61,18 @@ class IntakeSessionStore {
     };
   }
 
+  canUseMemoryFallback() {
+    return isMemoryFallbackAllowed();
+  }
+
+  handlePersistenceError(error) {
+    if (this.canUseMemoryFallback()) {
+      return;
+    }
+
+    throw createPersistenceError('Persistence is unavailable in this environment.', error.code || error.reason || 'DATABASE_UNAVAILABLE');
+  }
+
   async save(session) {
     try {
       await query(
@@ -104,7 +120,8 @@ class IntakeSessionStore {
           JSON.stringify(session.fields || {}),
         ],
       );
-    } catch (_error) {
+    } catch (error) {
+      this.handlePersistenceError(error);
       this.memory.save(session);
       return clone(session);
     }
@@ -136,7 +153,8 @@ class IntakeSessionStore {
           JSON.stringify(submission.payload || {}),
         ],
       );
-    } catch (_error) {
+    } catch (error) {
+      this.handlePersistenceError(error);
       this.memory.saveSubmission(submission);
       return clone(submission);
     }
@@ -157,7 +175,8 @@ class IntakeSessionStore {
       if (result.rows[0]) {
         return mapSubmissionRow(result.rows[0]);
       }
-    } catch (_error) {
+    } catch (error) {
+      this.handlePersistenceError(error);
       return this.memory.getSubmission(sessionId);
     }
 
@@ -178,7 +197,8 @@ class IntakeSessionStore {
         this.memory.save(session);
         return session;
       }
-    } catch (_error) {
+    } catch (error) {
+      this.handlePersistenceError(error);
       return this.memory.get(sessionId);
     }
 
@@ -199,7 +219,8 @@ class IntakeSessionStore {
         this.memory.save(session);
         return session;
       }
-    } catch (_error) {
+    } catch (error) {
+      this.handlePersistenceError(error);
       return this.memory.getByPublicSessionId(publicSessionId);
     }
 
@@ -220,7 +241,8 @@ class IntakeSessionStore {
         sessions.forEach((session) => this.memory.save(session));
         return sessions;
       }
-    } catch (_error) {
+    } catch (error) {
+      this.handlePersistenceError(error);
       return this.memory.list();
     }
 
@@ -233,7 +255,7 @@ class IntakeSessionStore {
     try {
       await query('truncate table intake_session_submissions, intake_session_state restart identity cascade');
     } catch (_error) {
-      // Ignore in tests/local fallback mode.
+      // Ignore in tests and local fallback mode.
     }
   }
 }
