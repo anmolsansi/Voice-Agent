@@ -24,6 +24,8 @@ export type IntakeSession = {
   updatedAt: string;
   expiresAt: string | null;
   submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
   completionSummary: {
     totalFields: number;
     completedFields: number;
@@ -89,6 +91,7 @@ export async function saveIntakeField(input: {
   sessionId: string;
   fieldKey: string;
   value: string | number | boolean;
+  source?: 'manual' | 'voice' | 'staff';
 }) {
   const response = await fetch('/api/intake/fields', {
     method: 'POST',
@@ -99,7 +102,7 @@ export async function saveIntakeField(input: {
       sessionId: input.sessionId,
       fieldKey: input.fieldKey,
       value: input.value,
-      source: 'manual',
+      source: input.source || 'manual',
     }),
   });
 
