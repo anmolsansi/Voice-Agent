@@ -1,4 +1,5 @@
 import { buildIntakeSteps, getIntakePath, getSafeSessionId } from '@/components/intake-flow';
+import { IntakeSessionShareCard } from '@/components/intake-session-share-card';
 import { PatientShell } from '@/components/patient-shell';
 import { SessionActions } from '@/components/session-actions';
 import { StateCard } from '@/components/state-card';
@@ -58,6 +59,12 @@ export default function IntakeCompletePage({ searchParams }: IntakeCompletePageP
             </div>
           </div>
         </StateCard>
+
+        <IntakeSessionShareCard
+          publicSessionId={sessionId}
+          title="Need to reopen this intake on mobile?"
+          description="Scan the QR code or copy the link if you need to reopen the submitted intake session on another device."
+        />
 
         <div className="rounded-3xl border border-slate-200 p-5">
           <h2 className="text-base font-semibold text-slate-900">What happens next?</h2>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { ConsentSection } from '@/components/consent-section';
 import { DemographicsSection } from '@/components/demographics-section';
+import { IntakeSessionShareCard } from '@/components/intake-session-share-card';
 import { SessionActions } from '@/components/session-actions';
 import { StateCard } from '@/components/state-card';
 import { VisitReasonSection } from '@/components/visit-reason-section';
@@ -145,6 +146,8 @@ export function PatientIntakeSession({ publicSessionId, reviewHref, startHref }:
           <span className="rounded-full bg-white/80 px-3 py-1 text-slate-700">Updated {new Date(session.updatedAt).toLocaleTimeString()}</span>
         </div>
       </StateCard>
+
+      <IntakeSessionShareCard publicSessionId={session.publicSessionId} />
 
       {saveError ? <p className="text-sm text-rose-600">{saveError}</p> : null}
 
