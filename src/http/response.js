@@ -9,6 +9,15 @@ function json(response, statusCode, payload) {
   response.end(body);
 }
 
+function send(response, statusCode, body, headers = {}) {
+  response.writeHead(statusCode, {
+    'Content-Length': Buffer.byteLength(body),
+    ...headers,
+  });
+
+  response.end(body);
+}
+
 function notFound(response, payload = { error: 'Not found' }) {
   return json(response, 404, payload);
 }
@@ -16,4 +25,5 @@ function notFound(response, payload = { error: 'Not found' }) {
 module.exports = {
   json,
   notFound,
+  send,
 };

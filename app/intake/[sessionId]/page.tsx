@@ -1,10 +1,6 @@
-import { ConsentSection } from '@/components/consent-section';
-import { DemographicsSection } from '@/components/demographics-section';
 import { buildIntakeSteps, getIntakePath } from '@/components/intake-flow';
+import { PatientIntakeSession } from '@/components/patient-intake-session';
 import { PatientShell } from '@/components/patient-shell';
-import { SessionActions } from '@/components/session-actions';
-import { StateCard } from '@/components/state-card';
-import { VisitReasonSection } from '@/components/visit-reason-section';
 
 type IntakeSessionPageProps = {
   params: {
@@ -35,25 +31,11 @@ export default function IntakeSessionPage({ params }: IntakeSessionPageProps) {
         </div>
       }
     >
-      <div className="space-y-6">
-        <StateCard
-          title="Patient flow shell preserved"
-          description="The demographics, visit reason, and consent sections plug into the existing session route, shared shell, and reusable field primitives without changing downstream review or completion routes."
-        />
-
-        <DemographicsSection />
-
-        <VisitReasonSection />
-
-        <ConsentSection />
-
-        <SessionActions
-          primaryLabel="Continue to review"
-          primaryHref={getIntakePath('review', sessionId)}
-          secondaryLabel="Back to start"
-          secondaryHref={getIntakePath('start')}
-        />
-      </div>
+      <PatientIntakeSession
+        publicSessionId={sessionId}
+        reviewHref={getIntakePath('review', sessionId)}
+        startHref={getIntakePath('start')}
+      />
     </PatientShell>
   );
 }

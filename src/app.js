@@ -16,11 +16,15 @@ function createApp(config) {
 
   return function app(request, response) {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
-    const route = routes.find(
-      (candidate) => candidate.method === request.method && candidate.path === url.pathname,
-    );
+    const routeMatch = routes.find((candidate) => {
+      if (candidate.method !== request.method) {
+        return false;
+      }
 
-    if (!route) {
+      return matchPath(candidate.path, url.pathname) !== null;
+    });
+
+    if (!routeMatch) {
       return notFound(response, {
         error: 'Route not found',
         method: request.method,
@@ -28,8 +32,40 @@ function createApp(config) {
       });
     }
 
-    return route.handler(request, response, { config, url });
+    const params = matchPath(routeMatch.path, url.pathname) || {};
+    return routeMatch.handler(request, response, { config, url, params });
   };
+}
+
+function matchPath(routePath, requestPath) {
+  if (routePath === requestPath) {
+    return {};
+  }
+
+  const routeSegments = routePath.split('/').filter(Boolean);
+  const requestSegments = requestPath.split('/').filter(Boolean);
+
+  if (routeSegments.length !== requestSegments.length) {
+    return null;
+  }
+
+  const params = {};
+
+  for (let index = 0; index < routeSegments.length; index += 1) {
+    const routeSegment = routeSegments[index];
+    const requestSegment = requestSegments[index];
+
+    if (routeSegment.startsWith(':')) {
+      params[routeSegment.slice(1)] = decodeURIComponent(requestSegment);
+      continue;
+    }
+
+    if (routeSegment !== requestSegment) {
+      return null;
+    }
+  }
+
+  return params;
 }
 
 module.exports = {
