@@ -8,13 +8,25 @@ const {
   saveFieldValue,
   submitIntakeSession,
 } = require('./session-service');
+const { closePool } = require('../../lib/db/postgres');
 
 async function resetStore() {
   await intakeSessionStore.clearAll();
+  await closePool();
+  delete process.env.DATABASE_URL;
+  process.env.ALLOW_MEMORY_FALLBACK = 'true';
+  process.env.NODE_ENV = 'test';
 }
 
-async function createSession() {
+test.beforeEach(async () => {
   await resetStore();
+});
+
+test.after(async () => {
+  await resetStore();
+});
+
+async function createSession() {
   return createIntakeSession({ sourceMode: 'manual' });
 }
 
@@ -98,13 +110,13 @@ test('rejects implausible dob, invalid chief complaint, and incomplete signature
   assert.deepEqual(badSignature.section.incompleteRequiredFields, ['consent.treatmentConsent', 'consent.signatureName']);
 });
 
-test('submits a complete session and stores a submission payload', async () => {
+test('submits a complete session by public session id and stores a submission payload', async () => {
   const session = await createSession();
   await completeRequiredFields(session.id);
 
-  const result = await submitIntakeSession({ sessionId: session.id });
+  const result = await submitIntakeSession({ publicSessionId: session.publicSessionId });
 
-  assert.equal(result.sessionId, session.id);
+  assert.equal(result.publicSessionId, session.publicSessionId);
   assert.equal(result.status, 'submitted');
   assert.ok(result.submittedAt);
   assert.ok(result.submissionId);

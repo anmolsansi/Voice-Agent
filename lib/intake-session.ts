@@ -36,7 +36,7 @@ export type IntakeSession = {
 };
 
 export type IntakeValidationSummary = {
-  sessionId: string;
+  publicSessionId: string;
   isSubmittable: boolean;
   incompleteRequiredFields: string[];
   invalidFields: string[];
@@ -49,7 +49,7 @@ export type IntakeValidationSummary = {
 };
 
 export type SubmitIntakeResponse = {
-  sessionId: string;
+  publicSessionId: string;
   status: 'submitted' | 'submission_blocked';
   submittedAt: string | null;
   submissionId: string | null;
@@ -119,7 +119,7 @@ export async function saveIntakeField(input: {
   }>;
 }
 
-export async function submitIntakeSession(input: { sessionId: string; signatureName: string }) {
+export async function submitIntakeSession(input: { publicSessionId: string; signatureName: string }) {
   const response = await fetch('/api/intake/sessions/submit', {
     method: 'POST',
     headers: {

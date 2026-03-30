@@ -3,14 +3,22 @@ const assert = require('node:assert/strict');
 const http = require('http');
 
 const { createApp } = require('../../app');
+const { closePool } = require('../../lib/db/postgres');
 const { intakeSessionStore } = require('./session-store');
+
+const STAFF_ACCESS_TOKEN = 'test-staff-token';
 
 async function resetStore() {
   await intakeSessionStore.clearAll();
+  await closePool();
+  delete process.env.DATABASE_URL;
+  delete process.env.ALLOW_MEMORY_FALLBACK;
+  process.env.NODE_ENV = 'test';
+  process.env.STAFF_ACCESS_TOKEN = STAFF_ACCESS_TOKEN;
 }
 
-function startTestServer() {
-  const app = createApp({ appName: 'test', port: 0, nodeEnv: 'test' });
+function startTestServer(nodeEnv = 'test') {
+  const app = createApp({ appName: 'test', port: 0, nodeEnv });
   const server = http.createServer(app);
 
   return new Promise((resolve) => {
@@ -50,6 +58,13 @@ async function saveField(baseUrl, sessionId, fieldKey, value) {
   assert.equal(response.status, 200);
 }
 
+function getStaffHeaders(headers = {}) {
+  return {
+    ...headers,
+    'x-staff-access-token': STAFF_ACCESS_TOKEN,
+  };
+}
+
 function decodePdfText(buffer) {
   const content = buffer.toString('latin1');
   const hexChunks = content.match(/<([0-9A-Fa-f]+)>/g) || [];
@@ -59,8 +74,16 @@ function decodePdfText(buffer) {
     .join(' ');
 }
 
+test.beforeEach(async () => {
+  await resetStore();
+});
+
+test.after(async () => {
+  await resetStore();
+});
+
 test('POST /api/intake/sessions/submit returns success for a complete session', async () => {
-  resetStore();
+  process.env.ALLOW_MEMORY_FALLBACK = 'true';
   const { server, baseUrl } = await startTestServer();
 
   try {
@@ -92,7 +115,7 @@ test('POST /api/intake/sessions/submit returns success for a complete session', 
 });
 
 test('POST /api/intake/sessions/submit returns clear validation details for an incomplete session', async () => {
-  resetStore();
+  process.env.ALLOW_MEMORY_FALLBACK = 'true';
   const { server, baseUrl } = await startTestServer();
 
   try {
@@ -123,7 +146,7 @@ test('POST /api/intake/sessions/submit returns clear validation details for an i
 });
 
 test('POST /api/staff/sessions/:publicSessionId/review marks a submitted session reviewed', async () => {
-  resetStore();
+  process.env.ALLOW_MEMORY_FALLBACK = 'true';
   const { server, baseUrl } = await startTestServer();
 
   try {
@@ -148,7 +171,7 @@ test('POST /api/staff/sessions/:publicSessionId/review marks a submitted session
 
     const response = await fetch(`${baseUrl}/api/staff/sessions/${session.publicSessionId}/review`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: getStaffHeaders({ 'content-type': 'application/json' }),
       body: JSON.stringify({ notes: 'Ready for staff callback.' }),
     });
     const payload = await response.json();
@@ -163,7 +186,7 @@ test('POST /api/staff/sessions/:publicSessionId/review marks a submitted session
 });
 
 test('GET /api/intake/sessions/:publicSessionId/pdf returns a PDF summary for a submitted session', async () => {
-  resetStore();
+  process.env.ALLOW_MEMORY_FALLBACK = 'true';
   const { server, baseUrl } = await startTestServer();
 
   try {
@@ -187,7 +210,9 @@ test('GET /api/intake/sessions/:publicSessionId/pdf returns a PDF summary for a 
 
     assert.equal(submitResponse.status, 200);
 
-    const response = await fetch(`${baseUrl}/api/intake/sessions/${session.publicSessionId}/pdf`);
+    const response = await fetch(`${baseUrl}/api/intake/sessions/${session.publicSessionId}/pdf`, {
+      headers: getStaffHeaders(),
+    });
     const pdfBuffer = Buffer.from(await response.arrayBuffer());
     const decodedPdfText = decodePdfText(pdfBuffer);
     const normalizedPdfText = decodedPdfText.replace(/\s+/g, '').toLowerCase();
@@ -201,6 +226,68 @@ test('GET /api/intake/sessions/:publicSessionId/pdf returns a PDF summary for a 
     assert.match(normalizedPdfText, /treatmentconsentconfirmed:yes/);
     assert.match(normalizedPdfText, /submissiontimestamp:/);
     assert.match(normalizedPdfText, new RegExp(submitPayload.submittedAt.slice(0, 4)));
+  } finally {
+    await stopTestServer(server);
+  }
+});
+
+test('pilot-like mode fails closed for intake persistence when DATABASE_URL is missing', async () => {
+  process.env.NODE_ENV = 'production';
+  const { server, baseUrl } = await startTestServer('production');
+
+  try {
+    const createResponse = await fetch(`${baseUrl}/api/intake/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sourceMode: 'manual' }),
+    });
+    const createPayload = await createResponse.json();
+
+    assert.equal(createResponse.status, 503);
+    assert.equal(createPayload.error, 'Service unavailable');
+    assert.equal(createPayload.message, 'Persistence is unavailable in this environment.');
+
+    const healthResponse = await fetch(`${baseUrl}/health`);
+    const healthPayload = await healthResponse.json();
+
+    assert.equal(healthResponse.status, 503);
+    assert.equal(healthPayload.persistence.ready, false);
+    assert.equal(healthPayload.persistence.mode, 'database-required');
+
+    const readyResponse = await fetch(`${baseUrl}/ready`);
+    const readyPayload = await readyResponse.json();
+
+    assert.equal(readyResponse.status, 503);
+    assert.equal(readyPayload.ready, false);
+    assert.equal(readyPayload.persistence.mode, 'database-required');
+  } finally {
+    await stopTestServer(server);
+  }
+});
+
+test('explicit memory fallback is surfaced in health and allows local persistence without DATABASE_URL', async () => {
+  process.env.NODE_ENV = 'production';
+  process.env.ALLOW_MEMORY_FALLBACK = 'true';
+  const { server, baseUrl } = await startTestServer('production');
+
+  try {
+    const createResponse = await fetch(`${baseUrl}/api/intake/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sourceMode: 'manual' }),
+    });
+    const createPayload = await createResponse.json();
+
+    assert.equal(createResponse.status, 201);
+    assert.ok(createPayload.session.id);
+
+    const healthResponse = await fetch(`${baseUrl}/health`);
+    const healthPayload = await healthResponse.json();
+
+    assert.equal(healthResponse.status, 200);
+    assert.equal(healthPayload.persistence.ready, true);
+    assert.equal(healthPayload.persistence.mode, 'memory-fallback');
+    assert.match(healthPayload.persistence.reason, /in-memory fallback/i);
   } finally {
     await stopTestServer(server);
   }

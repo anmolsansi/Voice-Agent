@@ -21,7 +21,7 @@ exports.up = (pgm) => {
   });
 
   pgm.addConstraint('intake_session_state', 'intake_session_state_status_check', {
-    check: "status in ('active', 'submitted')",
+    check: "status in ('active', 'submitted', 'reviewed')",
   });
 
   pgm.addConstraint('intake_session_state', 'intake_session_state_source_mode_check', {
