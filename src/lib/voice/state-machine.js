@@ -13,6 +13,15 @@
  * returned snapshot.
  */
 
+import {
+  VOICE_FIELD_ORDER,
+  VOICE_INTAKE_SECTIONS,
+  getNextVoiceFieldKey,
+  getSectionForVoiceField,
+  getVoicePrompt,
+} from './intake-config.js';
+import { extractFieldValue } from './extraction.js';
+
 /** @typedef {'idle' | 'listening' | 'transcribing' | 'confirming' | 'clarification' | 'manual_required' | 'error'} VoiceStateValue */
 
 /**
@@ -23,6 +32,10 @@
  * @property {string | null} clarificationPrompt
  * @property {string | null} fallbackReason
  * @property {string | null} error
+ * @property {string | null} activeSection
+ * @property {string | null} activeFieldKey
+ * @property {string | null} promptText
+ * @property {Record<string, string | number | boolean | null>} collectedFields
  */
 
 /**
@@ -33,6 +46,8 @@
  * @property {string} [clarificationPrompt]
  * @property {string} [reason]
  * @property {string} [error]
+ * @property {string} [fieldKey]
+ * @property {string} [sectionKey]
  */
 
 export const VOICE_STATES = Object.freeze({
@@ -134,9 +149,13 @@ export const VOICE_STATE_UI = Object.freeze({
 });
 
 /**
+ * @param {{ sectionKey?: string | null, fieldKey?: string | null }} [options]
  * @returns {VoiceStateSnapshot}
  */
-export function createInitialVoiceState() {
+export function createInitialVoiceState(options = {}) {
+  const initialFieldKey = resolveInitialFieldKey(options);
+  const prompt = initialFieldKey ? getVoicePrompt(initialFieldKey) : null;
+
   return {
     status: VOICE_STATES.IDLE,
     transcript: null,
@@ -144,6 +163,10 @@ export function createInitialVoiceState() {
     clarificationPrompt: null,
     fallbackReason: null,
     error: null,
+    activeSection: prompt?.sectionKey ?? null,
+    activeFieldKey: initialFieldKey,
+    promptText: prompt?.promptText ?? null,
+    collectedFields: {},
   };
 }
 
@@ -164,9 +187,11 @@ export function isValidVoiceTransition(from, to) {
  *   TRANSCRIPT_RECEIVED          -> listening => transcribing
  *   TRANSCRIPTION_COMPLETED      -> transcribing => confirming
  *   TRANSCRIPTION_UNCLEAR        -> transcribing => clarification
- *   CONFIRMATION_ACCEPTED        -> confirming => idle
+ *   CONFIRMATION_ACCEPTED        -> confirming => idle (and advance to next field)
  *   CONFIRMATION_REJECTED        -> confirming => clarification
  *   CLARIFICATION_REQUESTED      -> clarification => listening
+ *   SET_ACTIVE_FIELD             -> any => same status with new field/prompt context
+ *   ADVANCE_FIELD                -> any => same status with next field/prompt context
  *   MANUAL_FALLBACK_REQUESTED    -> many => manual_required
  *   ERROR_OCCURRED               -> many => error
  *   RESET                        -> any => idle
@@ -180,15 +205,23 @@ export function transitionVoiceState(currentState, event) {
     case 'START_LISTENING':
       return moveTo(currentState, VOICE_STATES.LISTENING);
 
+    case 'SET_ACTIVE_FIELD':
+      return applyPromptContext(currentState, event.fieldKey ?? getFieldKeyForSection(event.sectionKey));
+
+    case 'ADVANCE_FIELD':
+      return applyPromptContext(currentState, getNextVoiceFieldKey(currentState.activeFieldKey));
+
     case 'STOP':
-    case 'RESET':
-      return moveTo(currentState, VOICE_STATES.IDLE, {
-        transcript: null,
-        confirmationText: null,
-        clarificationPrompt: null,
-        fallbackReason: null,
-        error: null,
+    case 'RESET': {
+      const resetState = createInitialVoiceState({
+        fieldKey: currentState.activeFieldKey ?? VOICE_FIELD_ORDER[0] ?? null,
       });
+
+      return moveTo(currentState, VOICE_STATES.IDLE, {
+        ...resetState,
+        collectedFields: currentState.collectedFields,
+      });
+    }
 
     case 'TRANSCRIPT_RECEIVED':
       return moveTo(currentState, VOICE_STATES.TRANSCRIBING, {
@@ -198,33 +231,59 @@ export function transitionVoiceState(currentState, event) {
         error: null,
       });
 
-    case 'TRANSCRIPTION_COMPLETED':
+    case 'TRANSCRIPTION_COMPLETED': {
+      const transcript = event.transcript ?? currentState.transcript;
+      const extraction = currentState.activeFieldKey ? extractFieldValue(currentState.activeFieldKey, transcript) : null;
+      const prompt = currentState.activeFieldKey ? getVoicePrompt(currentState.activeFieldKey) : null;
+
+      if (!extraction || extraction.value == null) {
+        return moveTo(currentState, VOICE_STATES.CLARIFICATION, {
+          transcript,
+          confirmationText: null,
+          clarificationPrompt:
+            event.clarificationPrompt ?? prompt?.clarificationPrompt ?? 'I did not catch that. Please try again.',
+          error: null,
+        });
+      }
+
       return moveTo(currentState, VOICE_STATES.CONFIRMING, {
-        transcript: event.transcript ?? currentState.transcript,
-        confirmationText: event.confirmationText ?? event.transcript ?? currentState.transcript,
+        transcript,
+        confirmationText:
+          event.confirmationText ?? buildConfirmationText(currentState.activeFieldKey, extraction.value),
         clarificationPrompt: null,
+        collectedFields: {
+          ...currentState.collectedFields,
+          [currentState.activeFieldKey]: extraction.value,
+        },
         error: null,
       });
+    }
 
     case 'TRANSCRIPTION_UNCLEAR':
       return moveTo(currentState, VOICE_STATES.CLARIFICATION, {
         transcript: event.transcript ?? currentState.transcript,
         clarificationPrompt:
-          event.clarificationPrompt ?? 'I did not catch that. Please try again.',
+          event.clarificationPrompt
+          ?? getVoicePrompt(currentState.activeFieldKey)?.clarificationPrompt
+          ?? 'I did not catch that. Please try again.',
         confirmationText: null,
       });
 
-    case 'CONFIRMATION_ACCEPTED':
-      return moveTo(currentState, VOICE_STATES.IDLE, {
+    case 'CONFIRMATION_ACCEPTED': {
+      const nextState = applyPromptContext(currentState, getNextVoiceFieldKey(currentState.activeFieldKey));
+      return moveTo(nextState, VOICE_STATES.IDLE, {
         confirmationText: event.confirmationText ?? currentState.confirmationText,
         clarificationPrompt: null,
         error: null,
       });
+    }
 
     case 'CONFIRMATION_REJECTED':
       return moveTo(currentState, VOICE_STATES.CLARIFICATION, {
         clarificationPrompt:
-          event.clarificationPrompt ?? 'Let\'s try that again.',
+          event.clarificationPrompt
+          ?? getVoicePrompt(currentState.activeFieldKey)?.clarificationPrompt
+          ?? 'Let\'s try that again.',
       });
 
     case 'CLARIFICATION_REQUESTED':
@@ -251,12 +310,15 @@ export function transitionVoiceState(currentState, event) {
 
 /**
  * @param {VoiceStateSnapshot} state
- * @returns {{ status: VoiceStateValue, ui: { label: string, canUseMicrophone: boolean, canUseManualFallback: boolean } }}
+ * @returns {{ status: VoiceStateValue, ui: { label: string, canUseMicrophone: boolean, canUseManualFallback: boolean }, activeSection: string | null, activeFieldKey: string | null, promptText: string | null }}
  */
 export function getVoiceUiState(state) {
   return {
     status: state.status,
     ui: VOICE_STATE_UI[state.status],
+    activeSection: state.activeSection,
+    activeFieldKey: state.activeFieldKey,
+    promptText: state.promptText,
   };
 }
 
@@ -276,4 +338,33 @@ function moveTo(currentState, nextStatus, patch = {}) {
     ...patch,
     status: nextStatus,
   };
+}
+
+function resolveInitialFieldKey(options) {
+  if (options.fieldKey && getVoicePrompt(options.fieldKey)) return options.fieldKey;
+  if (options.sectionKey) return getFieldKeyForSection(options.sectionKey);
+  return VOICE_FIELD_ORDER[0] ?? null;
+}
+
+function getFieldKeyForSection(sectionKey) {
+  return VOICE_INTAKE_SECTIONS.find((section) => section.key === sectionKey)?.fieldKeys[0] ?? null;
+}
+
+function applyPromptContext(state, fieldKey) {
+  const prompt = fieldKey ? getVoicePrompt(fieldKey) : null;
+  const section = fieldKey ? getSectionForVoiceField(fieldKey) : null;
+
+  return {
+    ...state,
+    activeSection: section?.key ?? null,
+    activeFieldKey: fieldKey ?? null,
+    promptText: prompt?.promptText ?? null,
+    clarificationPrompt: prompt?.clarificationPrompt ?? state.clarificationPrompt,
+  };
+}
+
+function buildConfirmationText(fieldKey, value) {
+  const prompt = getVoicePrompt(fieldKey);
+  const label = prompt?.promptText ?? fieldKey;
+  return `I heard ${String(value)} for ${label}`;
 }

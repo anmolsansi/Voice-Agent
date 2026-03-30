@@ -15,6 +15,20 @@ export { VoiceProvider } from './provider.js';
 export { MockVoiceProvider } from './mock-provider.js';
 export { WebSpeechProvider } from './web-speech-provider.js';
 export {
+  VOICE_RESPONSE_TYPES,
+  VOICE_INTAKE_SECTIONS,
+  VOICE_PROMPT_MAP,
+  VOICE_FIELD_ORDER,
+  getVoicePrompt,
+  getVoiceFieldOrderForSection,
+  getNextVoiceFieldKey,
+  getSectionForVoiceField,
+} from './intake-config.js';
+export {
+  extractFieldValue,
+  extractVoiceHandoff,
+} from './extraction.js';
+export {
   VOICE_STATES,
   VOICE_STATE_TRANSITIONS,
   VOICE_STATE_UI,
