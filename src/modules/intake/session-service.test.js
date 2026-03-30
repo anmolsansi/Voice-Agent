@@ -8,38 +8,37 @@ const {
   submitIntakeSession,
 } = require('./session-service');
 
-function resetStore() {
-  intakeSessionStore.sessions.clear();
-  intakeSessionStore.submissions.clear();
+async function resetStore() {
+  await intakeSessionStore.clearAll();
 }
 
-function createSession() {
-  resetStore();
+async function createSession() {
+  await resetStore();
   return createIntakeSession({ sourceMode: 'manual' });
 }
 
-function completeRequiredFields(sessionId) {
-  saveFieldValue({ sessionId, fieldKey: 'patient.firstName', value: '  Ada ', source: 'manual' });
-  saveFieldValue({ sessionId, fieldKey: 'patient.lastName', value: '  Lovelace ', source: 'manual' });
-  saveFieldValue({ sessionId, fieldKey: 'patient.dateOfBirth', value: '1990-04-20T18:30:00.000Z', source: 'manual' });
-  saveFieldValue({ sessionId, fieldKey: 'patient.phone', value: '(312) 555-0100', source: 'manual' });
-  saveFieldValue({ sessionId, fieldKey: 'patient.sexAtBirth', value: 'female', source: 'manual' });
-  saveFieldValue({ sessionId, fieldKey: 'visit.chiefComplaint', value: '  Sore throat for two days ', source: 'manual' });
-  saveFieldValue({ sessionId, fieldKey: 'consent.treatmentConsent', value: true, source: 'manual' });
-  saveFieldValue({ sessionId, fieldKey: 'consent.signatureName', value: ' Ada Lovelace ', source: 'manual' });
+async function completeRequiredFields(sessionId) {
+  await saveFieldValue({ sessionId, fieldKey: 'patient.firstName', value: '  Ada ', source: 'manual' });
+  await saveFieldValue({ sessionId, fieldKey: 'patient.lastName', value: '  Lovelace ', source: 'manual' });
+  await saveFieldValue({ sessionId, fieldKey: 'patient.dateOfBirth', value: '1990-04-20T18:30:00.000Z', source: 'manual' });
+  await saveFieldValue({ sessionId, fieldKey: 'patient.phone', value: '(312) 555-0100', source: 'manual' });
+  await saveFieldValue({ sessionId, fieldKey: 'patient.sexAtBirth', value: 'female', source: 'manual' });
+  await saveFieldValue({ sessionId, fieldKey: 'visit.chiefComplaint', value: '  Sore throat for two days ', source: 'manual' });
+  await saveFieldValue({ sessionId, fieldKey: 'consent.treatmentConsent', value: true, source: 'manual' });
+  await saveFieldValue({ sessionId, fieldKey: 'consent.signatureName', value: ' Ada Lovelace ', source: 'manual' });
 }
 
-test('normalizes valid MVP fields and clears missing required summary state', () => {
-  const session = createSession();
+test('normalizes valid MVP fields and clears missing required summary state', async () => {
+  const session = await createSession();
 
-  saveFieldValue({ sessionId: session.id, fieldKey: 'patient.firstName', value: '  Ada ', source: 'manual' });
-  saveFieldValue({ sessionId: session.id, fieldKey: 'patient.lastName', value: '  Lovelace ', source: 'manual' });
-  const dobResult = saveFieldValue({ sessionId: session.id, fieldKey: 'patient.dateOfBirth', value: '1990-04-20T18:30:00.000Z', source: 'manual' });
-  const phoneResult = saveFieldValue({ sessionId: session.id, fieldKey: 'patient.phone', value: '(312) 555-0100', source: 'manual' });
-  saveFieldValue({ sessionId: session.id, fieldKey: 'patient.sexAtBirth', value: 'female', source: 'manual' });
-  saveFieldValue({ sessionId: session.id, fieldKey: 'visit.chiefComplaint', value: '  Sore throat for two days ', source: 'manual' });
-  saveFieldValue({ sessionId: session.id, fieldKey: 'consent.treatmentConsent', value: true, source: 'manual' });
-  const signatureResult = saveFieldValue({ sessionId: session.id, fieldKey: 'consent.signatureName', value: ' Ada Lovelace ', source: 'manual' });
+  await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.firstName', value: '  Ada ', source: 'manual' });
+  await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.lastName', value: '  Lovelace ', source: 'manual' });
+  const dobResult = await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.dateOfBirth', value: '1990-04-20T18:30:00.000Z', source: 'manual' });
+  const phoneResult = await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.phone', value: '(312) 555-0100', source: 'manual' });
+  await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.sexAtBirth', value: 'female', source: 'manual' });
+  await saveFieldValue({ sessionId: session.id, fieldKey: 'visit.chiefComplaint', value: '  Sore throat for two days ', source: 'manual' });
+  await saveFieldValue({ sessionId: session.id, fieldKey: 'consent.treatmentConsent', value: true, source: 'manual' });
+  const signatureResult = await saveFieldValue({ sessionId: session.id, fieldKey: 'consent.signatureName', value: ' Ada Lovelace ', source: 'manual' });
 
   assert.equal(dobResult.field.value, '1990-04-20');
   assert.equal(phoneResult.field.value, '+13125550100');
@@ -47,7 +46,7 @@ test('normalizes valid MVP fields and clears missing required summary state', ()
   assert.deepEqual(signatureResult.section.incompleteRequiredFields, []);
   assert.equal(signatureResult.section.completionState, 'in_progress');
 
-  const storedSession = intakeSessionStore.get(session.id);
+  const storedSession = await intakeSessionStore.get(session.id);
   assert.equal(storedSession.fields['consent.signedAt'].lastUpdatedBySource, 'system');
   assert.equal(storedSession.completionSummary.incompleteRequiredFields, 0);
   assert.deepEqual(
@@ -60,49 +59,49 @@ test('normalizes valid MVP fields and clears missing required summary state', ()
   );
 });
 
-test('requires at least one valid contact method and reports a single demographic summary gap', () => {
-  const session = createSession();
+test('requires at least one valid contact method and reports a single demographic summary gap', async () => {
+  const session = await createSession();
 
-  const missingPhone = saveFieldValue({ sessionId: session.id, fieldKey: 'patient.phone', value: '   ', source: 'manual' });
+  const missingPhone = await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.phone', value: '   ', source: 'manual' });
   assert.equal(missingPhone.validation.code, 'required_missing');
   assert.equal(missingPhone.validation.message, 'At least one contact method is required: provide a phone number or email address.');
   assert.deepEqual(missingPhone.section.incompleteRequiredFields, ['patient.firstName', 'patient.lastName', 'patient.dateOfBirth', 'patient.sexAtBirth', 'patient.contact']);
 
-  const invalidEmail = saveFieldValue({ sessionId: session.id, fieldKey: 'patient.email', value: 'not-an-email', source: 'manual' });
+  const invalidEmail = await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.email', value: 'not-an-email', source: 'manual' });
   assert.equal(invalidEmail.validation.code, 'invalid_format');
   assert.equal(invalidEmail.validation.blocking, true);
   assert.deepEqual(invalidEmail.section.incompleteRequiredFields, ['patient.firstName', 'patient.lastName', 'patient.dateOfBirth', 'patient.sexAtBirth', 'patient.contact']);
 
-  const validEmail = saveFieldValue({ sessionId: session.id, fieldKey: 'patient.email', value: ' Person@Example.COM ', source: 'manual' });
+  const validEmail = await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.email', value: ' Person@Example.COM ', source: 'manual' });
   assert.equal(validEmail.field.value, 'person@example.com');
   assert.equal(validEmail.validation.code, 'ok');
   assert.ok(!validEmail.section.incompleteRequiredFields.includes('patient.contact'));
 });
 
-test('rejects implausible dob, invalid chief complaint, and incomplete signature name with blocking validation', () => {
-  const session = createSession();
+test('rejects implausible dob, invalid chief complaint, and incomplete signature name with blocking validation', async () => {
+  const session = await createSession();
 
-  const badDob = saveFieldValue({ sessionId: session.id, fieldKey: 'patient.dateOfBirth', value: '1800-01-01', source: 'manual' });
+  const badDob = await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.dateOfBirth', value: '1800-01-01', source: 'manual' });
   assert.equal(badDob.validation.code, 'invalid_value');
   assert.equal(badDob.validation.message, 'Date of birth must be within a plausible age range.');
   assert.equal(badDob.field.completionState, 'incomplete_required');
 
-  const badComplaint = saveFieldValue({ sessionId: session.id, fieldKey: 'visit.chiefComplaint', value: 'x'.repeat(501), source: 'manual' });
+  const badComplaint = await saveFieldValue({ sessionId: session.id, fieldKey: 'visit.chiefComplaint', value: 'x'.repeat(501), source: 'manual' });
   assert.equal(badComplaint.validation.code, 'invalid_value');
   assert.equal(badComplaint.validation.message, 'Chief complaint must be 500 characters or less.');
   assert.deepEqual(badComplaint.section.incompleteRequiredFields, ['visit.chiefComplaint']);
 
-  const badSignature = saveFieldValue({ sessionId: session.id, fieldKey: 'consent.signatureName', value: 'Prince', source: 'manual' });
+  const badSignature = await saveFieldValue({ sessionId: session.id, fieldKey: 'consent.signatureName', value: 'Prince', source: 'manual' });
   assert.equal(badSignature.validation.code, 'invalid_value');
   assert.equal(badSignature.validation.message, 'Signature name must include first and last name.');
   assert.deepEqual(badSignature.section.incompleteRequiredFields, ['consent.treatmentConsent', 'consent.signatureName']);
 });
 
-test('submits a complete session and stores an in-memory submission payload', () => {
-  const session = createSession();
-  completeRequiredFields(session.id);
+test('submits a complete session and stores a submission payload', async () => {
+  const session = await createSession();
+  await completeRequiredFields(session.id);
 
-  const result = submitIntakeSession({ sessionId: session.id });
+  const result = await submitIntakeSession({ sessionId: session.id });
 
   assert.equal(result.sessionId, session.id);
   assert.equal(result.status, 'submitted');
@@ -111,23 +110,23 @@ test('submits a complete session and stores an in-memory submission payload', ()
   assert.equal(result.validation.isSubmittable, true);
   assert.deepEqual(result.validation.incompleteRequiredFields, []);
 
-  const storedSession = intakeSessionStore.get(session.id);
+  const storedSession = await intakeSessionStore.get(session.id);
   assert.equal(storedSession.status, 'submitted');
   assert.equal(storedSession.submittedAt, result.submittedAt);
 
-  const storedSubmission = intakeSessionStore.getSubmission(session.id);
+  const storedSubmission = await intakeSessionStore.getSubmission(session.id);
   assert.equal(storedSubmission.submissionId, result.submissionId);
   assert.equal(storedSubmission.status, 'submitted');
   assert.equal(storedSubmission.payload.status, 'submitted');
   assert.equal(storedSubmission.payload.submittedAt, result.submittedAt);
 });
 
-test('blocks submission for incomplete sessions and reports missing fields and sections', () => {
-  const session = createSession();
-  saveFieldValue({ sessionId: session.id, fieldKey: 'patient.firstName', value: 'Ada', source: 'manual' });
+test('blocks submission for incomplete sessions and reports missing fields and sections', async () => {
+  const session = await createSession();
+  await saveFieldValue({ sessionId: session.id, fieldKey: 'patient.firstName', value: 'Ada', source: 'manual' });
 
-  assert.throws(
-    () => submitIntakeSession({ sessionId: session.id }),
+  await assert.rejects(
+    submitIntakeSession({ sessionId: session.id }),
     (error) => {
       assert.equal(error.code, 'SUBMISSION_BLOCKED');
       assert.equal(error.details.isSubmittable, false);

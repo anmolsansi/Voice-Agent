@@ -5,9 +5,8 @@ const http = require('http');
 const { createApp } = require('../../app');
 const { intakeSessionStore } = require('./session-store');
 
-function resetStore() {
-  intakeSessionStore.sessions.clear();
-  intakeSessionStore.submissions.clear();
+async function resetStore() {
+  await intakeSessionStore.clearAll();
 }
 
 function startTestServer() {

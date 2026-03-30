@@ -139,7 +139,7 @@ function createPublicSessionId() {
   return `intake_${randomUUID()}`;
 }
 
-function createIntakeSession(input = {}) {
+async function createIntakeSession(input = {}) {
   const sourceMode = input.sourceMode || 'manual';
 
   if (!INTAKE_SOURCE_MODES.has(sourceMode)) {
@@ -158,6 +158,8 @@ function createIntakeSession(input = {}) {
     updatedAt: now,
     expiresAt: null,
     submittedAt: null,
+    reviewedAt: null,
+    reviewNotes: null,
     completionSummary: {
       totalFields: getTotalFieldCount(),
       completedFields: 0,
@@ -167,15 +169,15 @@ function createIntakeSession(input = {}) {
     fields: {},
   };
 
-  intakeSessionStore.save(session);
+  await intakeSessionStore.save(session);
   return serializeSession(session);
 }
 
-function loadIntakeSessionByPublicSessionId(publicSessionId) {
-  return serializeSession(getIntakeSessionByPublicSessionId(publicSessionId));
+async function loadIntakeSessionByPublicSessionId(publicSessionId) {
+  return serializeSession(await getIntakeSessionByPublicSessionId(publicSessionId));
 }
 
-function getIntakeSessionByPublicSessionId(publicSessionId) {
+async function getIntakeSessionByPublicSessionId(publicSessionId) {
   const normalizedPublicSessionId =
     typeof publicSessionId === 'string' ? publicSessionId.trim() : '';
 
@@ -183,7 +185,7 @@ function getIntakeSessionByPublicSessionId(publicSessionId) {
     throw createInputError('publicSessionId is required.', 'INVALID_PUBLIC_SESSION_ID');
   }
 
-  const session = intakeSessionStore.getByPublicSessionId(normalizedPublicSessionId);
+  const session = await intakeSessionStore.getByPublicSessionId(normalizedPublicSessionId);
   if (!session) {
     const error = new Error('Intake session not found.');
     error.code = 'SESSION_NOT_FOUND';
@@ -193,7 +195,7 @@ function getIntakeSessionByPublicSessionId(publicSessionId) {
   return session;
 }
 
-function saveFieldValue(input = {}) {
+async function saveFieldValue(input = {}) {
   const sessionId = typeof input.sessionId === 'string' ? input.sessionId.trim() : '';
   const fieldKey = typeof input.fieldKey === 'string' ? input.fieldKey.trim() : '';
   const source = input.source;
@@ -210,7 +212,7 @@ function saveFieldValue(input = {}) {
     throw createInputError('source must be one of: manual, voice, staff.', 'INVALID_SOURCE');
   }
 
-  const session = intakeSessionStore.get(sessionId);
+  const session = await intakeSessionStore.get(sessionId);
   if (!session) {
     const error = new Error('Intake session not found.');
     error.code = 'SESSION_NOT_FOUND';
@@ -259,7 +261,7 @@ function saveFieldValue(input = {}) {
 
   const validationByField = recomputeSessionState(session);
   session.updatedAt = now;
-  intakeSessionStore.save(session);
+  await intakeSessionStore.save(session);
 
   return {
     sessionId: session.id,
@@ -270,14 +272,14 @@ function saveFieldValue(input = {}) {
   };
 }
 
-function submitIntakeSession(input = {}) {
+async function submitIntakeSession(input = {}) {
   const sessionId = typeof input.sessionId === 'string' ? input.sessionId.trim() : '';
 
   if (!sessionId) {
     throw createInputError('sessionId is required.', 'INVALID_SESSION_ID');
   }
 
-  const session = intakeSessionStore.get(sessionId);
+  const session = await intakeSessionStore.get(sessionId);
   if (!session) {
     const error = new Error('Intake session not found.');
     error.code = 'SESSION_NOT_FOUND';
@@ -307,8 +309,8 @@ function submitIntakeSession(input = {}) {
     payload: serializeSession(session),
   };
 
-  intakeSessionStore.save(session);
-  intakeSessionStore.saveSubmission(submission);
+  await intakeSessionStore.save(session);
+  await intakeSessionStore.saveSubmission(submission);
 
   return {
     sessionId: session.id,
@@ -317,6 +319,33 @@ function submitIntakeSession(input = {}) {
     submissionId: submission.submissionId,
     validation: buildSubmissionValidationSummary(session, validationByField),
   };
+}
+
+async function reviewIntakeSessionByPublicSessionId(input = {}) {
+  const publicSessionId = typeof input.publicSessionId === 'string' ? input.publicSessionId.trim() : '';
+
+  if (!publicSessionId) {
+    throw createInputError('publicSessionId is required.', 'INVALID_PUBLIC_SESSION_ID');
+  }
+
+  const session = getIntakeSessionByPublicSessionId(publicSessionId);
+
+  if (session.status !== 'submitted' && session.status !== 'reviewed') {
+    const error = new Error('Only submitted sessions can be marked reviewed.');
+    error.code = 'INVALID_SESSION_STATUS';
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const nextNotes = typeof input.notes === 'string' ? input.notes.trim() : '';
+
+  session.status = 'reviewed';
+  session.reviewedAt = now;
+  session.reviewNotes = nextNotes || null;
+  session.updatedAt = now;
+
+  await intakeSessionStore.save(session);
+  return serializeSession(session);
 }
 
 function recomputeSessionState(session) {
@@ -375,7 +404,7 @@ function recomputeSessionState(session) {
     incompleteRequiredFields,
   };
 
-  if (session.status !== 'submitted') {
+  if (session.status !== 'submitted' && session.status !== 'reviewed') {
     session.status = 'active';
   }
 
@@ -691,6 +720,8 @@ function serializeSession(session) {
     updatedAt: session.updatedAt,
     expiresAt: session.expiresAt,
     submittedAt: session.submittedAt,
+    reviewedAt: session.reviewedAt,
+    reviewNotes: session.reviewNotes,
     completionSummary: session.completionSummary,
     sections: session.sections,
     fields: session.fields,
@@ -718,6 +749,7 @@ module.exports = {
   getIntakeSessionByPublicSessionId,
   intakeSessionStore,
   loadIntakeSessionByPublicSessionId,
+  reviewIntakeSessionByPublicSessionId,
   saveFieldValue,
   serializeSession,
   submitIntakeSession,
