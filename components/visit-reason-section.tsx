@@ -51,7 +51,7 @@ export function VisitReasonSection({ values, sectionState, saveState, onFieldCha
     <div id="section-visit-reason" className="space-y-6 scroll-mt-6">
       <StateCard
         title="Visit reason / chief complaint"
-        description="This MVP section stays tightly focused on why the patient is here today. Required versus optional symptom details remain clear, and saved values come back when the session reloads."
+        description="Capture why the patient is here today. Required and optional symptom details stay clear, and saved answers return when the session reloads."
         tone={requiredRemaining === 0 ? 'success' : 'default'}
       >
         <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.18em]">
@@ -63,11 +63,11 @@ export function VisitReasonSection({ values, sectionState, saveState, onFieldCha
         </div>
       </StateCard>
 
-      <FormSection title="Why are you visiting today?" description="Capture the frozen MVP visit reason fields only. This branch saves the core reason plus a couple of lightweight follow-up details without expanding into the later review or submission flow.">
+      <FormSection title="Why are you visiting today?" description="Record the main reason for today’s visit and any short follow-up details that help staff prepare.">
         <div className="grid gap-5">
-          <TextareaField name="visit.chiefComplaint" label="Chief complaint" required hint="Required for MVP. Describe the main reason for this visit in the patient’s own words when possible." placeholder="Example: Sore throat and fever since yesterday" rows={4} value={values.chiefComplaint} error={getRequiredError(values.chiefComplaint, true)} onChange={handleTextChange('chiefComplaint')} />
+          <TextareaField name="visit.chiefComplaint" label="Chief complaint" required hint="Describe the main reason for this visit in the patient’s own words when possible." placeholder="Example: Sore throat and fever since yesterday" rows={4} value={values.chiefComplaint} error={getRequiredError(values.chiefComplaint, true)} onChange={handleTextChange('chiefComplaint')} />
 
-          <TextField name="visit.symptomDuration" label="How long have you had these symptoms?" hint="Optional free-text duration field supported by the current backend schema." placeholder="Example: Since yesterday morning" value={values.symptomDuration} onChange={handleTextChange('symptomDuration')} />
+          <TextField name="visit.symptomDuration" label="How long have you had these symptoms?" hint="Optional detail to help staff understand the timeline." placeholder="Example: Since yesterday morning" value={values.symptomDuration} onChange={handleTextChange('symptomDuration')} />
 
           <div className="grid gap-4 md:grid-cols-2">
             <CheckboxField name="visit.feverPresent" label="I have had a fever with this issue" description="Optional quick flag for the current visit." checked={values.feverPresent} onChange={handleCheckboxChange('feverPresent')} />

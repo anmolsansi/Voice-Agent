@@ -10,13 +10,13 @@ export default function IntakeStartPage() {
     <PatientShell
       eyebrow="Welcome"
       title="Let’s get you checked in"
-      description="This entry route anchors the intake flow and hands patients into a session-aware workspace, review shell, and completion state without locking in schema details yet."
+      description="Start a new patient check-in, return to an in-progress intake on this device, and review answers before submitting."
       steps={buildIntakeSteps('start', demoSessionId)}
       aside={
         <div className="space-y-2 text-sm leading-6 text-slate-600">
           <h2 className="text-base font-semibold text-slate-900">What to expect</h2>
-          <p>Begin a new intake, move through the session shell, review what was captured, and finish with a confirmation state.</p>
-          <p>This route stays intentionally generic until voice and manual intake modules are plugged in.</p>
+          <p>Begin a new intake, answer the required questions, review what was captured, and finish with a confirmation page.</p>
+          <p>You can also resume a saved session on this device if the patient needs more time.</p>
         </div>
       }
     >
@@ -30,8 +30,8 @@ export default function IntakeStartPage() {
           <IntakeStartCard reviewHref={getIntakePath('review', demoSessionId)} />
 
           <StateCard
-            title="Shell-level only"
-            description="No schema-specific sections are rendered yet; this task keeps the flow scaffolding ready for later work."
+            title="Review before you submit"
+            description="Patients can confirm their answers and see any missing required items before check-in is submitted."
           />
         </div>
       </div>

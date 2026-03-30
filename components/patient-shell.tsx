@@ -101,8 +101,8 @@ export function PatientShell({
             <p className="text-sm font-semibold text-blue-200">Your visit</p>
             <h2 className="mt-2 text-xl font-semibold">A calm, mobile-friendly intake flow</h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              This shell is ready for voice-first and manual-first experiences. Form sections,
-              validation, and structured question logic will plug in next.
+              Complete your check-in on this device with clear steps, saved progress, and a review
+              screen before submission.
             </p>
           </div>
           <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-soft">

@@ -11,7 +11,7 @@ export default function HomePage() {
           Voice-first urgent care intake foundation
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-slate-400">
-          This branch includes patient intake flow foundation, staff dashboard shell, backend scaffolding, migrations, voice abstractions, and core planning/control docs.
+          Patient intake and staff review are available here, including saved progress, submission validation, and dashboard views for clinic teams.
         </p>
         <div className="mt-10 flex flex-wrap gap-4">
           <Link

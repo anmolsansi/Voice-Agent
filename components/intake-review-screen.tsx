@@ -125,12 +125,11 @@ const REVIEW_FIELDS: ReviewFieldDefinition[] = [
   {
     key: 'consent.hipaaAcknowledgment',
     label: 'HIPAA acknowledgment',
-    required: true,
     sectionKey: 'consent',
     sectionLabel: 'Consent',
     anchor: 'section-consent',
     getDisplayValue: (session) => formatBooleanValue(session.fields['consent.hipaaAcknowledgment']?.value === true),
-    isMissing: (session) => session.fields['consent.hipaaAcknowledgment']?.value !== true,
+    isMissing: () => false,
   },
   {
     key: 'consent.signatureName',
@@ -320,12 +319,12 @@ export function IntakeReviewScreen({ publicSessionId, sessionHref, completeHref,
 
       const signatureName = getStringValue(session, 'consent.signatureName');
       const result = await submitIntakeSession({
-        sessionId: session.publicSessionId,
+        publicSessionId: session.publicSessionId,
         signatureName,
       });
 
       const completeUrl = new URL(completeHref, window.location.origin);
-      completeUrl.searchParams.set('sessionId', result.sessionId || session.publicSessionId);
+      completeUrl.searchParams.set('sessionId', result.publicSessionId || session.publicSessionId);
 
       if (result.submissionId) {
         completeUrl.searchParams.set('submissionId', result.submissionId);

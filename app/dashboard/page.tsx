@@ -14,7 +14,7 @@ export default function DashboardPage() {
             Clinic intake operations
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            Shell-only view for queue monitoring, escalation triage, and follow-up workflows.
+            Monitor intake volume, open submitted records, and keep follow-up work moving.
           </p>
         </div>
         <Link
@@ -40,12 +40,12 @@ export default function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <EmptyState
           eyebrow="Queue"
-          title="No live queue integration yet"
-          description="Hook this card to intake session summaries, SLAs, and assignment state in a future task."
+          title="Queue feed not connected"
+          description="Use this area for intake session summaries, turnaround targets, and assignment state once data wiring is enabled."
         />
         <EmptyState
           eyebrow="Escalations"
-          title="No escalations in placeholder mode"
+          title="No escalations right now"
           description="Use this area for urgent flags, incomplete required fields, or staffing notifications."
         />
       </section>

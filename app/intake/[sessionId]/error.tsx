@@ -47,7 +47,7 @@ export default function IntakeSessionError({ error, reset }: IntakeSessionErrorP
         <SessionActions
           primaryLabel="Return to start"
           primaryHref="/intake/start"
-          secondaryLabel="Open review shell"
+          secondaryLabel="Open review page"
           secondaryHref="/intake/review"
         />
       </div>

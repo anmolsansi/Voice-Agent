@@ -41,13 +41,13 @@ type DemographicsSectionProps = {
   onFieldChange: (fieldKey: string, value: string) => void;
 };
 
-const REQUIRED_FIELD_KEYS: Array<keyof DemographicsValues> = ['firstName', 'lastName', 'dateOfBirth', 'sexAtBirth', 'phone'];
+const REQUIRED_FIELD_KEYS: Array<keyof DemographicsValues> = ['firstName', 'lastName', 'dateOfBirth', 'sexAtBirth'];
 const BASIC_FIELDS: FieldDefinition[] = [
   { key: 'firstName', label: 'First name', required: true, placeholder: 'Jordan' },
   { key: 'lastName', label: 'Last name', required: true, placeholder: 'Lee' },
   { key: 'genderIdentity', label: 'Gender identity', placeholder: 'Woman, man, nonbinary, etc.', hint: 'Optional free-text entry for how you identify.' },
-  { key: 'phone', label: 'Phone number', required: true, type: 'tel', placeholder: '(555) 123-4567' },
-  { key: 'email', label: 'Email address', type: 'email', placeholder: 'jordan@example.com', hint: 'Optional, but helpful for follow-up instructions.' },
+  { key: 'phone', label: 'Phone number', type: 'tel', placeholder: '(555) 123-4567', hint: 'Provide a phone number or an email address so staff can reach you if needed.' },
+  { key: 'email', label: 'Email address', type: 'email', placeholder: 'jordan@example.com', hint: 'Provide an email address or a phone number so staff can reach you if needed.' },
 ];
 const ADDRESS_FIELDS: FieldDefinition[] = [
   { key: 'addressLine1', label: 'Address line 1', placeholder: '123 Main St' },
@@ -89,7 +89,13 @@ function getSaveBadge(fieldKey: string, saveState: SaveState) {
 export function DemographicsSection({ values, sectionState, saveState, onFieldChange }: DemographicsSectionProps) {
   const addressInUse = Boolean(values.addressLine1 || values.addressLine2 || values.city || values.state || values.postalCode);
 
-  const requiredRemaining = useMemo(() => REQUIRED_FIELD_KEYS.filter((fieldKey) => !values[fieldKey].trim()).length, [values]);
+  const requiredRemaining = useMemo(() => {
+    let remaining = REQUIRED_FIELD_KEYS.filter((fieldKey) => !values[fieldKey].trim()).length;
+    if (!values.phone.trim() && !values.email.trim()) {
+      remaining += 1;
+    }
+    return remaining;
+  }, [values]);
   const completionState = requiredRemaining === 0 ? 'Ready for review' : `${requiredRemaining} required field${requiredRemaining === 1 ? '' : 's'} left`;
 
   function handleTextChange(key: keyof DemographicsValues) {
@@ -101,8 +107,8 @@ export function DemographicsSection({ values, sectionState, saveState, onFieldCh
   return (
     <div id="section-demographics" className="space-y-6 scroll-mt-6">
       <StateCard
-        title="Demographics / Contact basics"
-        description="MVP fields are rendered from the frozen intake schema. Required items stay obvious, optional contact details stay lightweight, and conditional inputs only appear when relevant."
+        title="Demographics and contact"
+        description="Enter the required patient details and at least one way for staff to reach the patient. Optional address and identity fields stay available without getting in the way."
         tone={requiredRemaining === 0 ? 'success' : 'default'}
       >
         <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.18em]">
@@ -115,7 +121,7 @@ export function DemographicsSection({ values, sectionState, saveState, onFieldCh
 
       <FormSection
         title="Patient details"
-        description="Collect the core contact and identity details needed to begin the visit. Changes save directly to the intake session as you type or select values."
+        description="Collect the core patient details needed to begin the visit. Changes save directly to the intake session as you type or select values."
       >
         <div className="grid gap-5 md:grid-cols-2">
           {BASIC_FIELDS.slice(0, 2).map((field) => (
@@ -124,7 +130,7 @@ export function DemographicsSection({ values, sectionState, saveState, onFieldCh
 
           <DateField name="patient.dateOfBirth" label="Date of birth" required hint="Must be a valid past date. Server-side validation remains the source of truth." value={values.dateOfBirth} error={getRequiredError(values.dateOfBirth, true)} onChange={handleTextChange('dateOfBirth')} max={new Date().toISOString().split('T')[0]} />
 
-          <SelectField name="patient.sexAtBirth" label="Sex at birth" required hint="MVP enum values follow the shared schema freeze." options={sexAtBirthOptions} value={values.sexAtBirth} error={getRequiredError(values.sexAtBirth, true)} onChange={handleTextChange('sexAtBirth')} />
+          <SelectField name="patient.sexAtBirth" label="Sex at birth" required hint="Choose the option that best matches the patient record." options={sexAtBirthOptions} value={values.sexAtBirth} error={getRequiredError(values.sexAtBirth, true)} onChange={handleTextChange('sexAtBirth')} />
 
           {values.sexAtBirth === 'self_describe' ? <TextField name="patient.sexAtBirthSelfDescribe" label="Describe sex at birth" hint="Shown only when self describe is selected above." placeholder="Describe in your own words" value={values.sexAtBirthSelfDescribe} onChange={handleTextChange('sexAtBirthSelfDescribe')} className="md:col-span-2" /> : null}
 
@@ -136,7 +142,7 @@ export function DemographicsSection({ values, sectionState, saveState, onFieldCh
         </div>
       </FormSection>
 
-      <FormSection title="Address" description="Address details are optional in MVP. State and ZIP appear once address entry begins so the section does not feel heavier than necessary.">
+      <FormSection title="Address" description="Address details are optional. State and ZIP appear once address entry begins so the form stays focused.">
         <div className="grid gap-5 md:grid-cols-2">
           {ADDRESS_FIELDS.slice(0, 3).map((field) => (
             <TextField key={field.key} name={`patient.${field.key}`} label={field.label} hint={field.hint} placeholder={field.placeholder} value={values[field.key]} onChange={handleTextChange(field.key)} />
@@ -146,7 +152,7 @@ export function DemographicsSection({ values, sectionState, saveState, onFieldCh
         </div>
       </FormSection>
 
-      <p className="text-xs text-slate-500">{getSaveBadge('patient.phone', saveState) || getSaveBadge('patient.firstName', saveState) || 'Fields save to the live intake session as you edit them.'}</p>
+      <p className="text-xs text-slate-500">{getSaveBadge('patient.phone', saveState) || getSaveBadge('patient.email', saveState) || getSaveBadge('patient.firstName', saveState) || 'Fields save to the intake session as you edit them.'}</p>
     </div>
   );
 }

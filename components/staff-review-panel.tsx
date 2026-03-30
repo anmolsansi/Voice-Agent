@@ -2,13 +2,26 @@
 
 import { useState } from 'react';
 import { type IntakeSession } from '@/lib/intake-session';
-import { formatSessionDateTime } from '@/lib/staff-intake';
 
 type StaffReviewPanelProps = {
   session: IntakeSession;
 };
 
 type ReviewState = 'idle' | 'submitting' | 'success' | 'error';
+
+function formatSessionDateTime(value: string | null) {
+  if (!value) {
+    return '—';
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(date);
+}
 
 export function StaffReviewPanel({ session }: StaffReviewPanelProps) {
   const [notes, setNotes] = useState(session.reviewNotes ?? '');

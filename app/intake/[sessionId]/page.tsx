@@ -15,18 +15,18 @@ export default function IntakeSessionPage({ params }: IntakeSessionPageProps) {
     <PatientShell
       eyebrow="In progress"
       title="Tell us about yourself and today’s visit"
-      description="Complete the frozen MVP intake fields for patient demographics, visit reason, and consent / HIPAA acknowledgment using the existing manual intake shell. Submission wiring remains intentionally lightweight in this branch."
+      description="Complete patient demographics, visit reason, and consent details, then review everything before submitting check-in."
       steps={buildIntakeSteps('session', sessionId)}
       aside={
         <div className="space-y-3 text-sm leading-6 text-slate-600">
-          <h2 className="text-base font-semibold text-slate-900">MVP intake scope</h2>
+          <h2 className="text-base font-semibold text-slate-900">Intake details</h2>
           <p>
             Session ID: <span className="font-mono text-slate-900">{sessionId}</span>
           </p>
           <p>
-            This step implements the frozen MVP demographics/contact, visit reason, and consent
-            sections. Required acknowledgments are visible here, while submission and backend save
-            wiring remain intentionally lightweight.
+            This step covers demographics, contact details, visit reason, and consent. Progress is
+            saved as answers are entered, and the review screen will show anything still required
+            before submission.
           </p>
         </div>
       }
