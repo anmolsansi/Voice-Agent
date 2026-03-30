@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { StaffLogoutButton } from '@/components/staff-logout-button';
 
 const nav = [
   {
@@ -9,7 +10,7 @@ const nav = [
   {
     label: 'Intake queue',
     href: '/dashboard/intake',
-    description: 'Review submitted patient intake shells.',
+    description: 'Review submitted patient intakes.'
   },
 ];
 
@@ -22,7 +23,7 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
         </p>
         <h1 className="mt-2 text-2xl font-semibold">Staff dashboard</h1>
         <p className="mt-2 text-sm text-slate-400">
-          Operations shell for clinic intake workflows.
+          Intake operations for submitted patient check-ins.
         </p>
 
         <nav className="mt-8 space-y-3" aria-label="Clinic operations">
@@ -49,9 +50,7 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
               CheckIn Care - Intake Operations
             </h2>
           </div>
-          <div className="rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300">
-            Staff placeholder
-          </div>
+          <StaffLogoutButton />
         </header>
         <main className="p-6">{children}</main>
       </div>

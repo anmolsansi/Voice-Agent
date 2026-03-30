@@ -40,12 +40,21 @@ export default async function IntakeDetailPage({
             Session {session.publicSessionId} · read-only staff view of the patient intake record.
           </p>
         </div>
-        <Link
-          href="/dashboard/intake"
-          className="inline-flex items-center rounded-full border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-100"
-        >
-          Back to queue
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={`/api/staff/sessions/${encodeURIComponent(session.publicSessionId)}/pdf`}
+            className="inline-flex items-center rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950"
+            target="_blank"
+          >
+            Open PDF summary
+          </Link>
+          <Link
+            href="/dashboard/intake"
+            className="inline-flex items-center rounded-full border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-100"
+          >
+            Back to queue
+          </Link>
+        </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
