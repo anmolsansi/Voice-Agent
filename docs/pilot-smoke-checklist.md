@@ -78,8 +78,9 @@ Expected result: HTTP 200.
 ### PDF flow
 
 1. Capture the `publicSessionId` from the submitted intake.
-2. Open `http://127.0.0.1:3001/api/intake/sessions/<publicSessionId>/pdf`.
+2. Open `http://127.0.0.1:3000/api/staff/sessions/<publicSessionId>/pdf`.
 3. Confirm the browser downloads/renders a PDF summary.
+4. Do not use the backend PDF URL directly in a browser; that route requires the `x-staff-access-token` header and is intended to be accessed through the frontend staff proxy.
 
 ## 7. Exit criteria
 

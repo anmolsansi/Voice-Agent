@@ -164,7 +164,7 @@ Use this exact flow before a pilot/demo:
 8. Confirm completion page loads with confirmation details.
 9. Open the staff dashboard at `http://127.0.0.1:3000/dashboard/intake`.
 10. Open the submitted intake, add review notes, and mark it reviewed.
-11. Open the generated PDF summary route for that session and confirm it renders.
+11. Open the generated PDF summary route for that session via `http://127.0.0.1:3000/api/staff/sessions/<publicSessionId>/pdf` and confirm it renders.
 
 ## Deployment notes
 
