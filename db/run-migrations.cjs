@@ -25,7 +25,7 @@ const sharedOptions = {
   migrationsTable: 'pgmigrations',
   schema: 'public',
   createSchema: false,
-  count: action === 'down-all' ? Infinity : 1,
+  count: action === 'down-all' ? Infinity : action === 'up' ? Infinity : 1,
   direction: action === 'up' ? 'up' : 'down',
   verbose: true,
 };
