@@ -79,7 +79,8 @@ The backend currently includes:
 ### Security and operational baseline
 
 The repo also includes:
-- pilot-grade staff auth guard using a shared staff access token
+- transitional staff auth guard with `STAFF_AUTH_MODE=legacy|jwt`
+- per-user JWT staff login support alongside temporary legacy shared-token compatibility
 - HTTP-only cookie handling for staff access
 - Next.js middleware protection for staff pages and staff API routes
 - PHI-safe logging guidance in project docs
@@ -91,7 +92,7 @@ The repo also includes:
 This section is intentionally direct: several important controls are not finished yet.
 
 Current limitations include:
-- staff access is protected by a shared token rather than individual user accounts
+- some deployments may still be on the legacy shared-token staff flow until the JWT rollout is completed
 - patient resume links do not yet have signed expiration / TTL enforcement
 - audit logging is not implemented beyond schema groundwork and a placeholder endpoint
 - rate limiting and request hardening are incomplete
@@ -158,6 +159,8 @@ FRONTEND_PORT=3000
 BACKEND_PORT=3001
 INTAKE_API_BASE_URL=http://127.0.0.1:3001
 APP_NAME=voice-agent-backend
+STAFF_AUTH_MODE=legacy
+JWT_SECRET=replace-with-a-long-random-jwt-secret
 STAFF_ACCESS_TOKEN=replace-with-a-long-random-staff-access-code
 ```
 
@@ -168,7 +171,9 @@ STAFF_ACCESS_TOKEN=replace-with-a-long-random-staff-access-code
 - `INTAKE_API_BASE_URL` must point the frontend at the backend
 - `DATABASE_URL` is required for Postgres-backed persistence and migrations
 - `PGSSL=true` should only be used when your Postgres provider requires SSL
-- `STAFF_ACCESS_TOKEN` protects staff pages and staff API routes in the current pilot setup
+- `STAFF_AUTH_MODE` selects the active staff auth path: `legacy` or `jwt`
+- `JWT_SECRET` is required when `STAFF_AUTH_MODE=jwt`
+- `STAFF_ACCESS_TOKEN` is only required for the legacy shared-token path and can be removed after a successful JWT cutover
 
 ## Install dependencies
 
@@ -193,6 +198,17 @@ npm run db:migrate
 This applies pending migrations and creates the `pgmigrations` table.
 
 Current migration count in the repo: **3**.
+
+## Seed the first staff account
+
+Create an initial staff admin before testing staff login flows:
+
+```bash
+npm run db:seed-staff -- --email admin@example.com --password 'ChangeMe123!' --display_name 'Clinic Admin' --role admin
+```
+
+The seed script also supports `STAFF_USER_EMAIL`, `STAFF_USER_PASSWORD`, `STAFF_USER_DISPLAY_NAME`, and `STAFF_USER_ROLE` from `.env` for non-interactive environments.
+If the email already exists, the script prints a skip message and exits successfully.
 
 ## Start the backend
 
@@ -235,9 +251,10 @@ A practical end-to-end verification flow is:
 7. Submit the intake
 8. Confirm the completion page loads
 9. Open `http://127.0.0.1:3000/dashboard/intake`
-10. Open the submitted session
-11. Add staff notes and mark it reviewed
-12. Open `http://127.0.0.1:3000/api/staff/sessions/<publicSessionId>/pdf` and verify the PDF renders or downloads
+10. Authenticate with the configured staff auth mode (`legacy` shared token or `jwt` staff-user login)
+11. Open the submitted session
+12. Add staff notes and mark it reviewed
+13. Open `http://127.0.0.1:3000/api/staff/sessions/<publicSessionId>/pdf` and verify the PDF renders or downloads
 
 ## Health and readiness behavior
 
@@ -261,15 +278,37 @@ In local development, explicit in-memory fallback can be surfaced when the datab
 
 ## Staff authentication model
 
-The current staff access model is intentionally minimal and should be treated as pilot-only.
+The project is in a transition from a shared pilot token to per-user JWT staff authentication.
 
-Current behavior:
+### Transition modes
+
+Staff authentication is selected with:
+
+```env
+STAFF_AUTH_MODE=legacy|jwt
+```
+
+#### Legacy mode
+
+When `STAFF_AUTH_MODE=legacy`:
 - staff access is gated by `STAFF_ACCESS_TOKEN`
 - successful login stores an HTTP-only cookie
 - Next middleware protects `/dashboard/*` and protected `/api/staff/*` routes
 - unauthorized staff API access returns `401`
 
-This is sufficient for controlled pilot use, but it is not appropriate as the long-term authentication model.
+This remains available for backward compatibility during rollout.
+
+#### JWT mode
+
+When `STAFF_AUTH_MODE=jwt`:
+- staff users authenticate as individual accounts
+- the backend uses JWT-backed staff authentication
+- staff actions can be attributed to an authenticated actor
+- `JWT_SECRET` must be configured
+
+Use JWT mode for new deployments and for existing deployments after staff-user seeding is complete.
+
+For the migration plan and rollout steps, see `docs/auth-upgrade-guide.md`.
 
 ## Available scripts
 
@@ -290,11 +329,13 @@ This is sufficient for controlled pilot use, but it is not appropriate as the lo
 - `npm run db:migrate` - apply pending migrations
 - `npm run db:rollback` - roll back the most recent migration
 - `npm run db:rollback:all` - roll back all migrations
+- `npm run db:seed-staff -- --email <email> --password <password> --display_name <name> --role <role>` - seed a staff user, or skip if the email already exists
 - `npm run db:create -- <name>` - create a new migration file in `db/migrations`
 
 ## Documentation
 
 Useful project documents:
+- `docs/auth-upgrade-guide.md`
 - `docs/pilot-smoke-checklist.md`
 - `docs/database-migrations.md`
 - `docs/phi-safe-logging-redaction-standard.md`
@@ -306,11 +347,10 @@ Useful project documents:
 
 The highest-priority work to make this suitable for production includes:
 
-1. Replace shared-token staff auth with real user authentication
-   - managed auth or OIDC
-   - per-user accounts
-   - MFA
-   - RBAC
+1. Complete the JWT staff-auth rollout and remove legacy shared-token support
+   - finish migration of remaining `legacy` deployments
+   - remove `STAFF_ACCESS_TOKEN` fallback after rollout confidence is established
+   - continue toward stronger RBAC / MFA as follow-up hardening
 
 2. Add expiring signed patient session links with TTL enforcement
 
@@ -340,7 +380,10 @@ The highest-priority work to make this suitable for production includes:
 
 11. Replace the current browser-based voice prototype with a more reliable production voice integration
 
-12. Add multi-user staff role support
+12. Expand staff user lifecycle tooling beyond the seed script
+    - self-service password reset
+    - admin UI / CLI for activation and role changes
+    - safer deactivation flows
 
 13. Define governance and moderation rules for staff notes
 

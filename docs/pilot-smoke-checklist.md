@@ -20,6 +20,11 @@ FRONTEND_PORT=3000
 BACKEND_PORT=3001
 INTAKE_API_BASE_URL=http://127.0.0.1:3001
 APP_NAME=voice-agent-backend
+STAFF_AUTH_MODE=legacy
+# For legacy pilot mode only:
+STAFF_ACCESS_TOKEN=replace-with-a-long-random-staff-access-code
+# For JWT mode:
+JWT_SECRET=replace-with-a-long-random-jwt-secret
 ```
 
 ## 3. Apply migrations
@@ -28,7 +33,19 @@ APP_NAME=voice-agent-backend
 npm run db:migrate
 ```
 
-## 4. Start services
+## 4. Seed the first staff admin
+
+Create the initial clinic admin account before attempting staff login:
+
+```bash
+npm run db:seed-staff -- --email admin@example.com --password 'ChangeMe123!' --display_name 'Clinic Admin' --role admin
+```
+
+Notes:
+- the seed script is non-interactive and can also read `STAFF_USER_EMAIL`, `STAFF_USER_PASSWORD`, `STAFF_USER_DISPLAY_NAME`, and `STAFF_USER_ROLE` from `.env`
+- the script is idempotent; if the email already exists it prints a skip message and exits successfully
+
+## 5. Start services
 
 Terminal 1:
 
@@ -71,9 +88,28 @@ Expected result: HTTP 200.
 ### Staff flow
 
 1. Open `http://127.0.0.1:3000/dashboard/intake`.
-2. Open the submitted intake.
-3. Add optional review notes.
-4. Mark the session reviewed.
+2. If the deployment is using `STAFF_AUTH_MODE=legacy`, unlock the dashboard with the shared `STAFF_ACCESS_TOKEN` flow.
+3. If the deployment is using `STAFF_AUTH_MODE=jwt`, sign in with a seeded staff user account.
+4. Open the submitted intake.
+5. Add optional review notes.
+6. Mark the session reviewed.
+
+### Staff account management
+
+- **Create the first admin**
+  ```bash
+  npm run db:seed-staff -- --email admin@example.com --password 'ChangeMe123!' --display_name 'Clinic Admin' --role admin
+  ```
+- **Add more staff users**
+  ```bash
+  npm run db:seed-staff -- --email nurse@example.com --password 'AnotherChangeMe123!' --display_name 'Nurse Example' --role staff
+  ```
+- **Deactivate a user for now**
+  ```sql
+  UPDATE staff_users
+  SET is_active = false
+  WHERE email = 'nurse@example.com';
+  ```
 
 ### PDF flow
 
@@ -91,3 +127,4 @@ Pilot setup is considered healthy when:
 - frontend loads and can reach backend APIs
 - intake can be created, saved, reviewed, submitted, and staff-reviewed
 - PDF summary renders for a submitted session
+- staff login works for the configured auth mode (`legacy` shared token or `jwt` per-user login)
