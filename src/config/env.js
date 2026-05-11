@@ -29,6 +29,8 @@ function getConfig() {
     databaseUrl: process.env.DATABASE_URL,
     pgSsl: /^true$/i.test(process.env.PGSSL || 'false'),
     allowMemoryFallback: /^true$/i.test(process.env.ALLOW_MEMORY_FALLBACK || 'false'),
+    storeRecordingUrls: /^true$/i.test(process.env.STORE_RECORDING_URLS || 'false'),
+    providerRecordingUrlsEnabled: /^true$/i.test(process.env.PROVIDER_RECORDING_URLS_ENABLED || 'false'),
   };
 }
 

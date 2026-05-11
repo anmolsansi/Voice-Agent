@@ -3,6 +3,7 @@ const { createHealthRoutes } = require('./modules/health/routes');
 const { createIntakeRoutes } = require('./modules/intake/routes');
 const { createSubmissionRoutes } = require('./modules/submission/routes');
 const { createAuditRoutes } = require('./modules/audit/routes');
+const { createCallRoutes } = require('./modules/calls/routes');
 const { createStaffRoutes } = require('./modules/staff/routes');
 const { createCallRoutes } = require('./modules/calls/routes');
 
@@ -11,6 +12,7 @@ function createApp(config) {
     ...createHealthRoutes(config),
     ...createIntakeRoutes(config),
     ...createSubmissionRoutes(config),
+    ...createCallRoutes(config),
     ...createAuditRoutes(config),
     ...createStaffRoutes(config),
     ...createCallRoutes(config),
