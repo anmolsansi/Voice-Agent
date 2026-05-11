@@ -4,6 +4,7 @@ const { createIntakeRoutes } = require('./modules/intake/routes');
 const { createSubmissionRoutes } = require('./modules/submission/routes');
 const { createAuditRoutes } = require('./modules/audit/routes');
 const { createStaffRoutes } = require('./modules/staff/routes');
+const { createCallRoutes } = require('./modules/calls/routes');
 
 function createApp(config) {
   const routes = [
@@ -12,6 +13,7 @@ function createApp(config) {
     ...createSubmissionRoutes(config),
     ...createAuditRoutes(config),
     ...createStaffRoutes(config),
+    ...createCallRoutes(config),
   ];
 
   return function app(request, response) {
