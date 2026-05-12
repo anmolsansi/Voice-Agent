@@ -84,8 +84,18 @@ The repo also includes:
 - HTTP-only cookie handling for staff access
 - Next.js middleware protection for staff pages and staff API routes
 - PHI-safe logging guidance in project docs
+- voice-agent MVP blueprint, architecture, and user-flow documentation
 - ESLint configuration
 - pilot smoke checklist and supporting operational documentation
+
+
+## Voice-agent MVP planning
+
+The OPE-32 voice-agent MVP target is documented in:
+
+- `docs/voice-agent-mvp.md` for scope, personas, call scenarios, non-goals, UI expectations, API/data boundaries, edge cases, and sequencing
+- `docs/architecture.md` for the app-level architecture, route/API/entity maps, telephony and AI service boundaries, and observability baseline
+- `docs/user-flows.md` for happy paths, escalation paths, failure paths, and desktop/mobile/loading/empty/error state expectations
 
 ## Known limitations
 
@@ -130,7 +140,7 @@ components/          Patient and staff UI components
 lib/                 Frontend/server shared helpers
 src/                 Backend server, modules, and tests
 db/migrations/       Postgres migrations
-docs/                Pilot, schema, and operational documentation
+docs/                Pilot, schema, voice-agent MVP, and operational documentation
 middleware.ts        Staff route protection for Next.js
 ```
 
