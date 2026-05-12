@@ -3,7 +3,7 @@ const { getConfig } = require('./config/env');
 const { createApp } = require('./app');
 
 function startServer() {
-  const config = getConfig();
+  const config = getConfig({ strict: true });
   const app = createApp(config);
   const server = http.createServer(app);
 

@@ -144,36 +144,43 @@ middleware.ts        Staff route protection for Next.js
 
 ## Environment setup
 
-Copy the example file:
+Copy the safe example file, then edit local-only values as needed:
 
 ```bash
 cp .env.example .env
 ```
 
-Example local configuration:
+The example file intentionally uses mock providers and placeholder secrets. Real credentials belong only in `.env`, `.env.local`, or your deployment secret store. Never commit real secrets or PHI-bearing test data.
 
-```env
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/voice_agent_dev
-PGSSL=false
-FRONTEND_PORT=3000
-BACKEND_PORT=3001
-INTAKE_API_BASE_URL=http://127.0.0.1:3001
-APP_NAME=voice-agent-backend
-STAFF_AUTH_MODE=legacy
-JWT_SECRET=replace-with-a-long-random-jwt-secret
-STAFF_ACCESS_TOKEN=replace-with-a-long-random-staff-access-code
-```
+### Environment variable reference
 
-### Environment variable notes
+| Variable | Runtime | Required when | Notes |
+| --- | --- | --- | --- |
+| `APP_URL` | Next.js/server | Always | Public app origin for local links. |
+| `INTAKE_API_BASE_URL` | Next.js server routes/scripts | Always | Backend base URL used by API proxy routes and simulation scripts. |
+| `FRONTEND_PORT` | Next.js CLI | Local dev/start | Defaults to `3000`. |
+| `BACKEND_PORT` / `PORT` | Node backend | Local dev/start | Must be a positive integer; defaults to `3001`. |
+| `APP_NAME` | Node backend | Optional | Service name shown in health/readiness responses. |
+| `NODE_ENV` | Node/Next.js | Always | `development`, `test`, or `production`. |
+| `LOG_LEVEL` | Server/scripts | Optional | `trace`, `debug`, `info`, `warn`, `error`, or `silent`. |
+| `DATABASE_URL` | Backend/migrations | Production and durable local dev | Required for migrations and production persistence. |
+| `PGSSL` | Backend/migrations | Hosted Postgres requiring SSL | Use `false` for local Postgres. |
+| `ALLOW_MEMORY_FALLBACK` | Backend/tests | Explicit local fallback only | Keep `false` for durable local pilot testing. |
+| `STAFF_AUTH_MODE` | Next.js staff auth/backend config | Always | `legacy` or `jwt`. |
+| `JWT_SECRET` | Staff auth/config | `STAFF_AUTH_MODE=jwt` | Long random secret; do not expose to client code. |
+| `STAFF_ACCESS_TOKEN` | Staff auth | Legacy mode, especially production | Shared pilot token for the current legacy dashboard path. |
+| `TELEPHONY_PROVIDER` | Backend/scripts | Always | `mock`, `twilio`, or `telnyx`; use `mock` locally. |
+| `TELEPHONY_ACCOUNT_SID`, `TELEPHONY_AUTH_TOKEN`, `TELEPHONY_API_KEY`, `TELEPHONY_FROM_NUMBER` | Backend/scripts | Real telephony testing | Provider credentials and sender number. |
+| `WEBHOOK_SIGNING_SECRET` | Backend/scripts | Real telephony webhooks | Local scripts use it to generate a test signature header. |
+| `WEBHOOK_TUNNEL_URL` | Developer tooling | Webhook tunnel testing | Public tunnel URL when exposing the backend to a provider. |
+| `AI_PROVIDER`, `AI_PROVIDER_API_KEY`, `AI_MODEL` | Backend/scripts | Non-mock AI provider | Use `mock` until real extraction/LLM calls are being tested. |
+| `TTS_PROVIDER`, `TTS_VOICE`, `TTS_LANGUAGE` | Voice UI/provider config | Voice testing | Browser prototype defaults to Web Speech settings. |
+| `STT_PROVIDER`, `STT_MODEL`, `STT_LANGUAGE` | Voice UI/provider config | Voice testing | Browser prototype defaults to Web Speech settings. |
+| `STORE_RECORDING_URLS`, `PROVIDER_RECORDING_URLS_ENABLED` | Backend call detail persistence | Recording URL policy allows storage | Keep both `false` unless approved. |
+| `FEATURE_VOICE_INTAKE`, `FEATURE_CALL_SIMULATION`, `FEATURE_WEBHOOK_SIMULATION` | Server/scripts | Optional | Boolean feature gates for local workflows. |
+| `NEXT_PUBLIC_ENABLE_VOICE_PROTOTYPE` | Browser | Optional | Public flag only; never put secrets in `NEXT_PUBLIC_*` variables. |
 
-- `FRONTEND_PORT` controls the Next.js app port
-- `BACKEND_PORT` controls the Node backend port
-- `INTAKE_API_BASE_URL` must point the frontend at the backend
-- `DATABASE_URL` is required for Postgres-backed persistence and migrations
-- `PGSSL=true` should only be used when your Postgres provider requires SSL
-- `STAFF_AUTH_MODE` selects the active staff auth path: `legacy` or `jwt`
-- `JWT_SECRET` is required when `STAFF_AUTH_MODE=jwt`
-- `STAFF_ACCESS_TOKEN` is only required for the legacy shared-token path and can be removed after a successful JWT cutover
+Server configuration is validated in `src/config/env.js`. Missing production persistence, malformed URLs, invalid enum values, and missing provider secrets for selected non-mock integrations fail fast with a safe error message that lists variable names but not secret values.
 
 ## Install dependencies
 
@@ -197,7 +204,7 @@ npm run db:migrate
 
 This applies pending migrations and creates the `pgmigrations` table.
 
-Current migration count in the repo: **3**.
+Current migration count in the repo: **5**.
 
 ## Seed the first staff account
 
@@ -207,8 +214,7 @@ Create an initial staff admin before testing staff login flows:
 npm run db:seed-staff -- --email admin@example.com --password 'ChangeMe123!' --display_name 'Clinic Admin' --role admin
 ```
 
-The seed script also supports `STAFF_USER_EMAIL`, `STAFF_USER_PASSWORD`, `STAFF_USER_DISPLAY_NAME`, and `STAFF_USER_ROLE` from `.env` for non-interactive environments.
-If the email already exists, the script prints a skip message and exits successfully.
+The current pilot schema still uses the legacy shared-token dashboard path. The seed script validates and echoes the requested local staff defaults without writing a password until the JWT staff-user table lands. Use `STAFF_AUTH_MODE=legacy` with `STAFF_ACCESS_TOKEN` for dashboard access in the current checkout.
 
 ## Start the backend
 
@@ -322,15 +328,24 @@ For the migration plan and rollout steps, see `docs/auth-upgrade-guide.md`.
 - `npm run start:frontend` - run the built frontend
 - `npm run start:backend` - run the backend
 - `npm run lint` - run ESLint
-- `npm test` - run backend tests
+- `npm run typecheck` - run TypeScript without emitting files
+- `npm test` - run Node.js tests
 
 ### Database
 
 - `npm run db:migrate` - apply pending migrations
 - `npm run db:rollback` - roll back the most recent migration
 - `npm run db:rollback:all` - roll back all migrations
-- `npm run db:seed-staff -- --email <email> --password <password> --display_name <name> --role <role>` - seed a staff user, or skip if the email already exists
+- `npm run db:seed-staff -- --email=<email> --password=<password> --display_name=<name> --role=<role>` - validate/echo local staff defaults while the pilot remains on legacy shared-token auth
 - `npm run db:create -- <name>` - create a new migration file in `db/migrations`
+
+
+### Local simulation scripts
+
+- `npm run call:simulate -- --patient-id=local-patient-001 --schedule-id=local-schedule-001` - enqueue a local check-in call through the backend API.
+- `npm run webhook:simulate -- --public-call-id=local_call_001` - post a mock provider webhook/call-detail payload, including a local HMAC signature header.
+
+Both scripts read `.env` / `.env.local` and default to `INTAKE_API_BASE_URL` or `http://127.0.0.1:3001`. Start the backend first with `npm run dev:backend`.
 
 ## Documentation
 
