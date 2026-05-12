@@ -1,3 +1,4 @@
+const { enqueueEligibleCheckInCalls } = require('../../jobs/checkins');
 const { readJsonBody } = require('../../http/request');
 const { json } = require('../../http/response');
 const { createRouter } = require('../../http/router');
@@ -15,6 +16,20 @@ const {
 
 function createCallRoutes() {
   const router = createRouter();
+
+  router.get('/api/calls', async (_request, response, context) => {
+    try {
+      const filters = {
+        patientId: context.url.searchParams.get('patientId') || undefined,
+        scheduleId: context.url.searchParams.get('scheduleId') || undefined,
+        status: context.url.searchParams.get('status') || undefined,
+      };
+      const items = await listCalls(filters);
+      return json(response, 200, { items, total: items.length });
+    } catch (error) {
+      return json(response, getCallStatusCode(error), serializeCallError(error, 'Unable to list calls.'));
+    }
+  });
 
   router.post('/api/calls', async (request, response) => {
     try {
