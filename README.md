@@ -97,6 +97,12 @@ The OPE-32 voice-agent MVP target is documented in:
 - `docs/architecture.md` for the app-level architecture, route/API/entity maps, telephony and AI service boundaries, and observability baseline
 - `docs/user-flows.md` for happy paths, escalation paths, failure paths, and desktop/mobile/loading/empty/error state expectations
 
+The current Voice Agent foundation branch also adds framework-neutral service contracts for conversation state, prompt governance, outbound sandbox calls, webhook normalization, realtime turns, patient/schedule management, safety guardrails, escalations, call review, dashboard selectors, audit logging, health checks, and scheduled-call jobs. These contracts can be validated with:
+
+```bash
+npm run check:voice-agent
+```
+
 ## Known limitations
 
 This section is intentionally direct: several important controls are not finished yet.
