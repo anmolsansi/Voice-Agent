@@ -11,6 +11,7 @@
     "start:frontend": "next start --hostname 0.0.0.0 --port ${FRONTEND_PORT:-3000}",
     "start:backend": "node src/server.js",
     "lint": "next lint",
+    "check:voice-agent": "node scripts/validate-fixtures.mjs",
     "test": "node --test src/config/*.test.js src/modules/**/*.test.js",
     "db:migrate": "node db/run-migrations.cjs up",
     "db:rollback": "node db/run-migrations.cjs down",
