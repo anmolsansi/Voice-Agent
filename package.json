@@ -1,0 +1,11 @@
+{
+  "name": "checkin-care-voice-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/validate-fixtures.mjs",
+    "test": "npm run check",
+    "build": "npm run check"
+  }
+}
