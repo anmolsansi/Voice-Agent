@@ -12,6 +12,11 @@ const nav = [
     href: '/dashboard/intake',
     description: 'Review submitted patient intakes.'
   },
+  {
+    label: 'Voice dashboard',
+    href: '/dashboard/voice',
+    description: 'Monitor voice check-ins, calls, and alerts.'
+  },
 ];
 
 export function StaffShell({ children }: { children: React.ReactNode }) {

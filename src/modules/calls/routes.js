@@ -2,7 +2,6 @@ const { enqueueEligibleCheckInCalls } = require('../../jobs/checkins');
 const { readJsonBody } = require('../../http/request');
 const { json } = require('../../http/response');
 const { createRouter } = require('../../http/router');
-const { enqueueEligibleCheckInCalls } = require('../../jobs/checkins');
 const { getCallDetail: getPersistedCallDetail, persistCallDetail } = require('./call-service');
 const {
   createCallAttempt,
