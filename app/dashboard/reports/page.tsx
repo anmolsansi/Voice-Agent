@@ -13,6 +13,7 @@ type ReportSearchParams = {
   program?: string;
   owner?: string;
   status?: string;
+  risk?: string;
 };
 
 const metricLabels = [
@@ -22,6 +23,9 @@ const metricLabels = [
   { key: 'failedCalls', label: 'Failed calls', helper: 'No-answer, voicemail, or failed' },
   { key: 'retryRate', label: 'Retry rate', helper: 'Attempts after first try' },
   { key: 'escalationRate', label: 'Escalation rate', helper: 'Escalations per attempt' },
+  { key: 'contactRate', label: 'Contact rate', helper: 'Answered calls per attempt' },
+  { key: 'noAnswerRate', label: 'No-answer rate', helper: 'No-answer calls per attempt' },
+  { key: 'guardrailRate', label: 'Guardrail rate', helper: 'Safety hits per attempt' },
   { key: 'urgentAlertCount', label: 'Urgent alerts', helper: 'Highest-priority flags' },
   { key: 'transcriptConfidence', label: 'Avg. confidence', helper: 'Patient transcript turns' },
 ] as const;
@@ -40,7 +44,7 @@ function buildHref(overrides: Partial<VoiceReportFilters>) {
 
 function buildFilterHref(
   filters: ReturnType<typeof normalizeReportFilters>,
-  key: keyof Pick<VoiceReportFilters, 'range' | 'program' | 'owner' | 'status'>,
+  key: keyof Pick<VoiceReportFilters, 'range' | 'program' | 'owner' | 'status' | 'risk'>,
   value: string,
 ) {
   return buildHref({
@@ -48,6 +52,7 @@ function buildFilterHref(
     program: filters.program,
     owner: filters.owner,
     status: filters.status,
+    risk: filters.risk,
     [key]: value,
   });
 }
@@ -80,6 +85,8 @@ export default function ReportsPage({
     program: filters.program,
     owner: filters.owner,
     status: filters.status,
+    risk: filters.risk,
+    timeZone: filters.timeZone,
     requestedBy: 'staff-dashboard',
   }).toString()}`;
 
@@ -115,7 +122,7 @@ export default function ReportsPage({
           </p>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-4">
+        <div className="grid gap-4 xl:grid-cols-5">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Range</p>
             <div className="flex flex-wrap gap-2">
@@ -177,6 +184,21 @@ export default function ReportsPage({
                   className={filterButtonClass(filters.status === status.value)}
                 >
                   {status.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Risk</p>
+            <div className="flex flex-wrap gap-2">
+              {filterOptions.risks.map((risk) => (
+                <Link
+                  key={risk.value}
+                  href={buildFilterHref(filters, 'risk', risk.value)}
+                  className={filterButtonClass(filters.risk === risk.value)}
+                >
+                  {risk.label}
                 </Link>
               ))}
             </div>
@@ -294,6 +316,98 @@ export default function ReportsPage({
               </table>
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
+            Outcomes
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-white">Disposition breakdown</h2>
+          <div className="mt-4 space-y-3">
+            {report.breakdowns.byOutcome.length === 0 ? (
+              <p className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">
+                No outcomes matched these filters.
+              </p>
+            ) : (
+              report.breakdowns.byOutcome.map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                  <span className="font-medium text-white">{formatReportLabel(item.label)}</span>
+                  <span className="text-sm text-slate-300">{item.count} - {item.rate}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
+            Programs
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-white">Care program mix</h2>
+          <div className="mt-4 space-y-3">
+            {report.breakdowns.byProgram.map((item) => (
+              <div key={item.label} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                <p className="font-medium text-white">{item.label}</p>
+                <p className="mt-2 text-sm text-slate-300">
+                  {item.attempted} attempts, {item.completed} completed, {item.escalated} escalated
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
+            Escalations
+          </p>
+          <h2 className="mt-2 text-xl font-semibold text-white">Follow-up load</h2>
+          <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+              <dt className="text-xs uppercase tracking-[0.2em] text-slate-500">Total</dt>
+              <dd className="mt-2 text-2xl font-semibold text-white">{report.escalationSummary.total}</dd>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+              <dt className="text-xs uppercase tracking-[0.2em] text-slate-500">Open</dt>
+              <dd className="mt-2 text-2xl font-semibold text-white">{report.escalationSummary.open}</dd>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+              <dt className="text-xs uppercase tracking-[0.2em] text-slate-500">Urgent</dt>
+              <dd className="mt-2 text-2xl font-semibold text-white">{report.escalationSummary.urgent}</dd>
+            </div>
+          </dl>
+          <div className="mt-4 space-y-3">
+            {report.escalationSummary.byOwner.map((item) => (
+              <div key={item.owner} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                <span className="font-medium text-white">{item.owner}</span>
+                <span className="text-sm text-slate-300">{item.open} open, {item.urgent} urgent</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
+              Definitions
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Metric contract</h2>
+          </div>
+          <p className="text-sm text-slate-400">API: /api/reports/metrics</p>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {Object.entries(report.metricDefinitions).map(([key, definition]) => (
+            <article key={key} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <h3 className="font-semibold text-white">{definition.label}</h3>
+              <p className="mt-2 text-sm text-slate-300">{definition.formula}</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+                {definition.numerator} / {definition.denominator}
+              </p>
+            </article>
+          ))}
         </div>
       </section>
     </div>
