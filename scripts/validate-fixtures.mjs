@@ -51,6 +51,11 @@ import {
   buildEscalationInbox,
   buildPatientDetail
 } from "../src/dashboard/selectors.mjs";
+import {
+  buildVoiceReport,
+  exportVoiceReportCsv,
+  listReportFilterOptions
+} from "../src/services/reports/reporting-service.mjs";
 
 const {
   users,
@@ -328,5 +333,21 @@ assert(patientDetail.openEscalations.length === 1, "patient detail failed");
 assert(buildCallReview(voiceAgentFixtures, "call-maria-completed").transcript.length === 3, "call review failed");
 const inbox = buildEscalationInbox(voiceAgentFixtures, { status: "open" });
 assert(inbox[0].patient.id === "patient-evelyn-chen", "escalation inbox failed");
+
+const report = buildVoiceReport({ range: "30d", now: "2026-05-15T00:00:00.000Z", requestedBy: "validation" });
+assert(report.metrics.attemptedCalls === 5, "report attempted call count failed");
+assert(report.metrics.completedCheckIns === 1, "report completed check-in count failed");
+assert(report.metrics.failedCalls === 2, "report failed call count failed");
+assert(report.metrics.retryRate === "20%", "report retry rate failed");
+assert(report.metrics.escalationRate === "20%", "report escalation rate failed");
+assert(report.metrics.transcriptConfidence > 0, "report confidence metric failed");
+assert(report.rows.every((row) => row.phone.startsWith("redacted-")), "report phone redaction failed");
+assert(report.rows.every((row) => row.summary === "[redacted summary]"), "report summary redaction failed");
+assert(buildVoiceReport({ range: "7d", program: "program-diabetes", status: "completed" }).empty, "report empty state failed");
+assert(listReportFilterOptions().programs.length >= 2, "report filter options failed");
+const csv = exportVoiceReportCsv(report);
+assert(csv.includes("schemaVersion,voice-report-v1"), "report csv metadata failed");
+assert(csv.includes("callId,patientId,patientName"), "report csv headers failed");
+assert(!csv.includes("+14155550101"), "report csv should not expose raw phone number");
 
 console.log("Voice Agent fixtures validated.");

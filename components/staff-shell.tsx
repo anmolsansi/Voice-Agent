@@ -17,6 +17,11 @@ const nav = [
     href: '/dashboard/voice',
     description: 'Monitor voice check-ins, calls, and alerts.'
   },
+  {
+    label: 'Reports',
+    href: '/dashboard/reports',
+    description: 'Review call analytics and export audit snapshots.'
+  },
 ];
 
 export function StaffShell({ children }: { children: React.ReactNode }) {
