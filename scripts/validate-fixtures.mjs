@@ -56,6 +56,12 @@ import {
   exportVoiceReportCsv,
   listReportFilterOptions
 } from "../src/services/reports/reporting-service.mjs";
+import {
+  analyticsEventTypes,
+  buildAnalyticsEventsFromFixtures,
+  dedupeAnalyticsEvents
+} from "../src/analytics/events.mjs";
+import { aggregationContract, metricDefinitions, summarizeEvents } from "../src/analytics/metrics.mjs";
 
 const {
   users,
@@ -340,14 +346,36 @@ assert(report.metrics.completedCheckIns === 1, "report completed check-in count 
 assert(report.metrics.failedCalls === 2, "report failed call count failed");
 assert(report.metrics.retryRate === "20%", "report retry rate failed");
 assert(report.metrics.escalationRate === "20%", "report escalation rate failed");
+assert(report.metrics.contactRate === "60%", "report contact rate failed");
+assert(report.metrics.noAnswerRate === "20%", "report no-answer rate failed");
+assert(report.metrics.guardrailRate === "20%", "report guardrail rate failed");
 assert(report.metrics.transcriptConfidence > 0, "report confidence metric failed");
+assert(report.metricDefinitions.completionRate.formula.includes("completed"), "report metric definitions failed");
+assert(report.aggregationContract.request.timeZone.includes("IANA"), "report aggregation contract failed");
+assert(report.eventSummary.call_dialed === 5, "report event summary failed");
+assert(report.breakdowns.byProgram.length >= 2, "report program breakdown failed");
+assert(report.breakdowns.byOutcome.some((item) => item.label === "voicemail"), "report outcome breakdown failed");
+assert(report.escalationSummary.open === 1, "report escalation summary failed");
 assert(report.rows.every((row) => row.phone.startsWith("redacted-")), "report phone redaction failed");
 assert(report.rows.every((row) => row.summary === "[redacted summary]"), "report summary redaction failed");
 assert(buildVoiceReport({ range: "7d", program: "program-diabetes", status: "completed" }).empty, "report empty state failed");
+assert(buildVoiceReport({ range: "30d", risk: "high" }).rows.every((row) => row.riskLevel === "high"), "report risk filter failed");
 assert(listReportFilterOptions().programs.length >= 2, "report filter options failed");
+assert(listReportFilterOptions().risks.length >= 3, "report risk filter options failed");
 const csv = exportVoiceReportCsv(report);
 assert(csv.includes("schemaVersion,voice-report-v1"), "report csv metadata failed");
 assert(csv.includes("callId,patientId,patientName"), "report csv headers failed");
 assert(!csv.includes("+14155550101"), "report csv should not expose raw phone number");
+
+const analyticsEvents = buildAnalyticsEventsFromFixtures(voiceAgentFixtures);
+const analyticsSummary = summarizeEvents(analyticsEvents);
+assert(analyticsEventTypes.includes("guardrail_hit"), "analytics event type contract failed");
+assert(analyticsSummary.call_dialed === 5, "analytics dialed event count failed");
+assert(analyticsSummary.call_scheduled >= 2, "analytics scheduled event count failed");
+assert(analyticsSummary.guardrail_hit >= 1, "analytics guardrail event count failed");
+assert(dedupeAnalyticsEvents([analyticsEvents[0], analyticsEvents[0]]).length === 1, "analytics event dedupe failed");
+assert(metricDefinitions.completionRate.formula === "completed check-ins / attempted calls", "metric formula contract failed");
+assert(metricDefinitions.guardrailRate.formula === "unique guardrail-hit calls / attempted calls", "guardrail formula contract failed");
+assert(aggregationContract.response.breakdowns.includes("care program"), "aggregation response contract failed");
 
 console.log("Voice Agent fixtures validated.");

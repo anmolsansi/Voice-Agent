@@ -1,4 +1,6 @@
 import { voiceAgentFixtures } from "../../lib/mock-data/voice-agent-fixtures.mjs";
+import { buildAnalyticsEventsFromFixtures } from "../../analytics/events.mjs";
+import { aggregationContract, metricDefinitions, summarizeEvents } from "../../analytics/metrics.mjs";
 
 const DEFAULT_SCHEMA_VERSION = "voice-report-v1";
 const DEFAULT_NOW = "2026-05-15T00:00:00.000Z";
@@ -117,6 +119,13 @@ export function listReportFilterOptions(dataset = voiceAgentFixtures) {
         value: disposition
       }))
     ],
+    risks: [
+      { label: "All risk levels", value: "all" },
+      ...Array.from(new Set(dataset.patients.map((patient) => patient.riskLevel))).map((risk) => ({
+        label: formatReportLabel(risk),
+        value: risk
+      }))
+    ],
     usersById
   };
 }
@@ -129,6 +138,8 @@ export function normalizeReportFilters(filters = {}) {
     program: filters.program || "all",
     owner: filters.owner || "all",
     status: filters.status || "all",
+    risk: filters.risk || "all",
+    timeZone: filters.timeZone || "UTC",
     requestedBy: filters.requestedBy || "system"
   };
 }
@@ -144,6 +155,7 @@ export function buildVoiceReport(filters = {}, dataset = voiceAgentFixtures) {
     if (!patient) return false;
     if (normalizedFilters.program !== "all" && patient.careProgramId !== normalizedFilters.program) return false;
     if (normalizedFilters.owner !== "all" && patient.assignedUserId !== normalizedFilters.owner) return false;
+    if (normalizedFilters.risk !== "all" && patient.riskLevel !== normalizedFilters.risk) return false;
     return true;
   };
 
@@ -175,6 +187,15 @@ export function buildVoiceReport(filters = {}, dataset = voiceAgentFixtures) {
   const fallbackCount = calls.filter((call) => FALLBACK_DISPOSITIONS.has(call.disposition)).length;
   const durationSeconds = calls.map((call) => secondsBetween(call.startedAt, call.endedAt));
   const confidenceValues = calls.flatMap((call) => (transcriptTurnsByCallId.get(call.id) || []).map((turn) => turn.confidence));
+  const analyticsEvents = buildAnalyticsEventsFromFixtures(dataset)
+    .filter((event) => isWithinRange(event.timestamp, startDate, endDate))
+    .filter((event) => patientMatches(patientsById.get(event.patientId)));
+  const eventSummary = summarizeEvents(analyticsEvents);
+  const guardrailCallCount = uniqueCount(
+    analyticsEvents
+      .filter((event) => event.type === "guardrail_hit")
+      .map((event) => event.callSessionId)
+  );
 
   const trendMap = new Map();
   for (const call of calls) {
@@ -205,6 +226,7 @@ export function buildVoiceReport(filters = {}, dataset = voiceAgentFixtures) {
       phone: patient ? redactPhoneNumber(patient.phoneNumber) : "redacted",
       program: patient ? getProgramName(careProgramsById, patient) : "Unknown program",
       owner: patient ? getOwnerName(usersById, patient) : "Unassigned",
+      riskLevel: patient?.riskLevel || "unknown",
       disposition: call.disposition,
       status: call.status,
       startedAt: call.startedAt,
@@ -244,7 +266,24 @@ export function buildVoiceReport(filters = {}, dataset = voiceAgentFixtures) {
       fallbackCount,
       transcriptConfidence: Number(average(confidenceValues).toFixed(2)),
       activeEscalations: activeEscalations.length,
-      completionRate: percentage(completedCheckIns, calls.length)
+      completionRate: percentage(completedCheckIns, calls.length),
+      contactRate: percentage(eventSummary.call_answered || 0, eventSummary.call_dialed || 0),
+      noAnswerRate: percentage(eventSummary.call_no_answer || 0, eventSummary.call_dialed || 0),
+      guardrailRate: percentage(guardrailCallCount, eventSummary.call_dialed || 0)
+    },
+    metricDefinitions,
+    aggregationContract,
+    eventSummary,
+    breakdowns: {
+      byProgram: buildBreakdown(calls, patientsById, (patient) => patient ? getProgramName(careProgramsById, patient) : "Unknown program"),
+      byOutcome: buildCallBreakdown(calls, (call) => call.disposition),
+      byRiskLevel: buildBreakdown(calls, patientsById, (patient) => patient?.riskLevel || "unknown")
+    },
+    escalationSummary: {
+      total: escalations.length,
+      open: activeEscalations.length,
+      urgent: urgentAlerts,
+      byOwner: buildEscalationOwnerSummary(escalations, patientsById, usersById)
     },
     trends: Array.from(trendMap.values()).sort((left, right) => left.date.localeCompare(right.date)),
     rows,
@@ -268,6 +307,7 @@ export function exportVoiceReportCsv(report) {
     "phone",
     "program",
     "owner",
+    "riskLevel",
     "disposition",
     "status",
     "startedAt",
@@ -292,4 +332,51 @@ export function formatReportLabel(value = "") {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function buildBreakdown(calls, patientsById, getLabel) {
+  const byLabel = new Map();
+
+  for (const call of calls) {
+    const label = getLabel(patientsById.get(call.patientId));
+    const current = byLabel.get(label) || { label, attempted: 0, completed: 0, escalated: 0, failed: 0 };
+    current.attempted += 1;
+    if (call.disposition === "completed") current.completed += 1;
+    if (call.disposition === "escalated") current.escalated += 1;
+    if (["failed", "no_answer", "voicemail"].includes(call.status)) current.failed += 1;
+    byLabel.set(label, current);
+  }
+
+  return Array.from(byLabel.values()).sort((left, right) => right.attempted - left.attempted || left.label.localeCompare(right.label));
+}
+
+function buildCallBreakdown(calls, getLabel) {
+  const byLabel = new Map();
+
+  for (const call of calls) {
+    const label = getLabel(call);
+    const current = byLabel.get(label) || { label, count: 0, rate: "0%" };
+    current.count += 1;
+    byLabel.set(label, current);
+  }
+
+  return Array.from(byLabel.values())
+    .map((item) => ({ ...item, rate: percentage(item.count, calls.length) }))
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+}
+
+function buildEscalationOwnerSummary(escalations, patientsById, usersById) {
+  const byOwner = new Map();
+
+  for (const escalation of escalations) {
+    const patient = patientsById.get(escalation.patientId);
+    const owner = patient ? getOwnerName(usersById, patient) : "Unassigned";
+    const current = byOwner.get(owner) || { owner, total: 0, urgent: 0, open: 0 };
+    current.total += 1;
+    if (escalation.priority === "urgent") current.urgent += 1;
+    if (ACTIVE_ESCALATION_STATUSES.has(escalation.status)) current.open += 1;
+    byOwner.set(owner, current);
+  }
+
+  return Array.from(byOwner.values()).sort((left, right) => right.open - left.open || left.owner.localeCompare(right.owner));
 }

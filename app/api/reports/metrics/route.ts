@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   buildVoiceReport,
-  exportVoiceReportCsv,
+  normalizeReportFilters,
 } from '@/src/services/reports/reporting-service.mjs';
 import {
   STAFF_ACCESS_COOKIE,
@@ -38,7 +38,7 @@ export function GET(request: NextRequest) {
     );
   }
 
-  const report = buildVoiceReport({
+  const filters = normalizeReportFilters({
     range,
     program: params.get('program') || undefined,
     owner: params.get('owner') || undefined,
@@ -47,14 +47,10 @@ export function GET(request: NextRequest) {
     timeZone: params.get('timeZone') || undefined,
     requestedBy: params.get('requestedBy') || 'staff-dashboard',
   });
-  const csv = exportVoiceReportCsv(report);
-  const generatedDate = report.metadata.generatedAt.slice(0, 10);
+  const report = buildVoiceReport(filters);
 
-  return new NextResponse(csv, {
-    status: 200,
+  return NextResponse.json(report, {
     headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="voice-report-${generatedDate}.csv"`,
       'Cache-Control': 'no-store',
       'X-Report-Schema-Version': report.metadata.schemaVersion,
       'X-Report-Row-Count': String(report.metadata.rowCount),
