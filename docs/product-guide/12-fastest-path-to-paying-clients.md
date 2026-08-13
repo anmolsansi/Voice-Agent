@@ -1,1774 +1,1961 @@
-# Fastest Path From Today's Repository to Paying Clients
+# Fastest Path From Today's Repository to a Complete Product Clients Can Buy
 
 ## Purpose
 
-This document answers a commercial question, not only an engineering question:
+This document answers one commercial and engineering question:
 
-> What is the shortest honest path from the current CheckIn Care / Voice-Agent repository to a product that a real client can pay for and use repeatedly?
+> What is the shortest responsible path from the current CheckIn Care / Voice-Agent repository to a complete product that a client can buy, use, and keep paying for?
 
-The answer is not "finish every feature." It is also not "deploy the current repository and call it production-ready."
+This plan follows a strict founder rule:
 
-The fastest responsible path is to create a narrow product that solves one painful workflow extremely well, sell it first as a controlled paid pilot, and then convert that pilot into recurring software revenue once the production, security, privacy, and operational controls are proven.
+> If a client and CheckIn Care agree that the delivered product contains 10 features, all 10 features must be complete before the product is treated as commercially delivered. We do not deliver 8 features, charge for 8, and promise the remaining 2 later.
 
-This document is deliberately written as a devil's-advocate plan. It assumes that a buyer will ask difficult questions, a patient will behave unexpectedly, a provider will fail at the worst possible time, and a clinic will not tolerate software that requires the developer to manually repair ordinary workflows.
+This rule changes the previous commercial strategy.
 
-The commercial goal is:
+The earlier version of this plan allowed a paid design-partner or partial pilot engagement before the entire agreed product scope was complete. That approach is no longer the recommended commercial model for this project.
 
-> Get to the first legitimate paying client as quickly as possible without lying about product readiness, then turn that client into recurring revenue by removing the remaining manual work and proving reliability.
+We can still talk to prospective clients early. We can still demonstrate prototypes with synthetic data. We can still gather requirements, negotiate contracts, and obtain written intent to buy. But the client should not be charged for an unfinished product if the commercial agreement says the client is buying the completed product.
 
----
+The goal is therefore not:
 
-# 1. The uncomfortable truth
+```text
+Sell something incomplete
+-> collect partial revenue
+-> finish the rest later
+```
 
-The current repository cannot honestly be sold today as a finished production healthcare SaaS product.
+The goal is:
 
-It contains real and useful software, including a working web intake flow, staff review workflow, PostgreSQL persistence, call-domain groundwork, dashboard work, scheduling concepts, safety helpers, and substantial voice-agent architecture.
+```text
+Understand the exact client problem
+-> freeze a complete scope
+-> build every item in that scope
+-> test every item
+-> pass client-readiness gates
+-> demonstrate the completed product
+-> obtain client acceptance
+-> activate billing for the complete product
+-> operate it reliably
+-> earn recurring revenue
+```
 
-However, important parts of the outbound voice product are still prototype, simulated, disconnected, duplicated, or incomplete.
-
-Examples include:
-
-- simulated outbound call behavior,
-- incomplete production telephony integration,
-- no complete live telephone audio-to-AI-to-audio pipeline,
-- hardcoded/sample voice dashboard data,
-- overlapping patient/call/audit data models,
-- incomplete per-user authorization across all protected routes,
-- no complete multi-client organization isolation,
-- incomplete consent and communication-preference history,
-- incomplete durable escalation workflow,
-- incomplete automated test coverage,
-- no mature CI/CD release process,
-- no proven production monitoring/recovery process,
-- no finished client onboarding experience,
-- no complete security/compliance launch package.
-
-Therefore there are two different commercial milestones.
-
-## Commercial milestone A: sellable engagement
-
-A client can pay for a controlled implementation/pilot engagement before the full production SaaS is finished.
-
-What you are selling is:
-
-- a defined use case,
-- a configured demonstration,
-- workflow design,
-- implementation/setup work,
-- a controlled pilot,
-- agreed delivery milestones,
-- eventual recurring access if the pilot succeeds.
-
-This can be sold much sooner.
-
-## Commercial milestone B: sellable production SaaS
-
-A client can depend on the system for real patient operations with agreed security, privacy, availability, support, and failure behavior.
-
-This requires the production-readiness work described in the rest of this documentation set.
-
-Do not confuse A and B.
-
-A paid pilot is still revenue.
-
-Pretending A is B creates legal, clinical, security, reputational, and commercial risk.
+This is deliberately a devil's-advocate plan. It assumes that a buyer will notice missing functionality, a patient will behave unexpectedly, a provider will fail, staff will make mistakes, and a clinic will not accept a product that requires the developer to manually repair ordinary workflows.
 
 ---
 
-# 2. The first product to sell
+# 1. The founder's commercial principle
+
+The commercial principle for CheckIn Care is:
+
+## Complete the agreed scope before charging for the delivered product
+
+If the client contract or statement of work says the product includes:
+
+1. patient import,
+2. staff accounts,
+3. automated scheduling,
+4. outbound calls,
+5. voice check-ins,
+6. safety escalation,
+7. call history,
+8. Patient 360,
+9. reporting,
+10. audit history,
+
+then all 10 are part of the product definition.
+
+If items 9 and 10 are unfinished, the product is not 80% commercially complete.
+
+It is incomplete.
+
+The response should not be:
+
+> We completed eight, so pay us 80% and we will finish the other two later.
+
+The response should be:
+
+> Items nine and ten remain blockers. We finish them, test the entire workflow again, obtain acceptance, and then treat the scope as delivered.
+
+This avoids four problems.
+
+### Problem 1: client disappointment
+
+The client bought an outcome, not a progress percentage.
+
+### Problem 2: permanent unfinished work
+
+Partial billing can create a habit where unfinished items remain in the backlog indefinitely.
+
+### Problem 3: trust problems
+
+Healthcare clients need to trust the product and the team. A pattern of "mostly complete" delivery weakens that trust.
+
+### Problem 4: operational fragmentation
+
+If every client is using a different partially completed version, support becomes extremely difficult.
+
+---
+
+# 2. What this rule does not mean
+
+This rule does **not** mean we should blindly build every feature any prospect asks for.
+
+That would create an endless custom-development company.
+
+There are two separate questions:
+
+## Question A: Should we agree to this feature?
+
+This happens before scope is frozen.
+
+We should challenge the request.
+
+We should ask:
+
+- Is this required for the client's main workflow?
+- Is it useful to other likely clients?
+- Does it create legal or clinical scope we do not want?
+- Does it require a large integration that changes the project economics?
+- Can we offer a simpler product solution?
+- Does it belong in V1 or a separately priced future expansion?
+
+We may say no.
+
+## Question B: Once we agree to the feature, must we finish it?
+
+Yes.
+
+Once it is part of the signed accepted scope, it becomes a delivery obligation.
+
+Do not solve scope-control problems by delivering incomplete work.
+
+Solve them by freezing the right scope before implementation.
+
+---
+
+# 3. The commercial model changes from partial pilot revenue to complete-package revenue
+
+The recommended commercial path is now:
+
+## Stage 0: free or internal discovery
+
+Purpose:
+
+- understand the workflow,
+- understand buyer needs,
+- understand procurement/security requirements,
+- determine whether CheckIn Care fits.
+
+No production-delivery claim is made.
+
+Activities may include:
+
+- discovery calls,
+- product walkthroughs,
+- synthetic-data demonstrations,
+- requirements interviews,
+- technical/security discussions,
+- pricing conversations,
+- scope negotiation.
+
+These activities help us avoid building the wrong product.
+
+## Stage 1: complete-scope agreement
+
+Before building client-specific work, define exactly what the client will receive.
+
+The agreement should contain:
+
+- included features,
+- excluded features,
+- workflow definition,
+- user roles,
+- integrations,
+- supported patient population,
+- supported geography where relevant,
+- support model,
+- security/privacy assumptions,
+- acceptance criteria,
+- client responsibilities,
+- CheckIn Care responsibilities,
+- launch gates,
+- commercial terms.
+
+The client may sign an agreement before the product is complete, but billing for the delivered software should follow the commercial structure you choose and must not represent incomplete delivery as complete delivery.
+
+For this project, the recommended default is:
+
+> Product subscription billing begins after the agreed complete scope passes acceptance and is activated for the client.
+
+## Stage 2: complete implementation
+
+Build the entire accepted scope.
+
+No "we will finish this after go-live" for an item that is required for the agreed first release.
+
+## Stage 3: complete acceptance
+
+Run:
+
+- automated tests,
+- security tests,
+- end-to-end tests,
+- client acceptance tests,
+- launch checklist,
+- applicable external review.
+
+## Stage 4: client activation and billing
+
+Once the product is accepted and safe to activate:
+
+- production access is enabled,
+- billing begins,
+- monitoring/support begins,
+- operational metrics are tracked.
+
+## Stage 5: recurring subscription
+
+The client continues paying because the complete workflow continues creating value.
+
+---
+
+# 4. The first complete product we should sell
 
 Do not sell "AI healthcare automation."
 
-That is too broad.
+That is too broad and creates an unlimited feature expectation.
 
-Do not initially sell:
+The fastest path is to define one **complete product package** around one high-value workflow.
 
-- full patient engagement,
-- full contact-center replacement,
-- all urgent-care workflows,
-- diagnosis,
-- clinical decision support,
-- appointment automation,
-- medication management,
-- EHR replacement,
-- omnichannel communication.
+## Recommended first product package
 
-Sell one narrow workflow.
+### CheckIn Care Post-Visit Follow-Up
 
-## Recommended first sellable workflow
+Initial target:
 
-### 48-Hour Post-Visit Follow-Up
+- urgent-care groups,
+- outpatient clinics,
+- specialty clinics,
+- similar care teams that perform repetitive patient follow-up calls.
 
-The clinic enrolls selected patients after an urgent-care or similar outpatient visit.
+Product promise:
 
-The system later contacts the patient and asks a short approved set of non-diagnostic questions.
+> CheckIn Care automatically performs approved post-visit patient check-ins and gives the care team a complete, prioritized human follow-up workflow for cases that should not remain automated.
 
-The system records structured answers and identifies responses that require human follow-up.
+The important word is **complete**.
 
-The care team receives a prioritized queue and resolves each follow-up item.
+The product should not merely place a call.
 
-Plain-language example:
-
-```text
-Patient visits clinic
-        |
-        v
-Patient is enrolled in follow-up program
-        |
-        v
-CheckIn Care schedules follow-up
-        |
-        v
-Patient receives automated phone call
-        |
-        v
-Approved questions are asked
-        |
-        +---- Routine answers ----> Completed
-        |
-        +---- Concerning answer --> Human follow-up queue
-        |
-        +---- No answer ----------> Retry policy
-        |
-        +---- Stop calling -------> Opt-out
-        |
-        v
-Care team sees result and acts when needed
-```
-
-This is narrow enough to build and test properly.
-
-It is also easy for a client to understand.
+It should cover the entire operational loop.
 
 ---
 
-# 3. Why this first use case is commercially better than a generic voice agent
+# 5. Complete V1 feature contract
 
-A clinic buyer does not primarily care that the product uses an LLM, STT, TTS, agents, webhooks, embeddings, or orchestration.
+Before seeking the first paying production client, freeze the V1 feature contract.
 
-They care about operational outcomes.
+This is the proposed complete initial feature set.
 
-A first use case should answer questions such as:
+## 5.1 Organization and client isolation
 
-- Can we reach more patients without staff manually dialing everyone?
-- Can staff quickly see which patients need follow-up?
-- Can routine check-ins be handled consistently?
-- Can we reduce repetitive phone work?
-- Can we prove which patients were contacted?
-- Can a staff member see what happened without listening to every call?
-- Can patients easily request a human?
-- Can the system stop calling people who opt out?
-- Can we identify failures instead of silently losing them?
+The product must support:
 
-That is what the sales story should focus on.
+- organization creation,
+- organization status,
+- organization configuration,
+- every protected record belonging to the correct organization,
+- strict prevention of cross-organization access.
 
----
+Why it matters:
 
-# 4. The immediate revenue strategy
+If Clinic A can access Clinic B information, the product is not client-ready.
 
-The fastest revenue path should have three commercial stages.
+## 5.2 Staff accounts
 
-## Stage A: paid design partner
+The product must support:
 
-Sell before the product is fully production-ready, but be precise about what is being purchased.
+- individual users,
+- sign-in,
+- sign-out,
+- secure sessions,
+- password/account lifecycle appropriate to the chosen authentication approach,
+- disabled users,
+- role assignment,
+- server-side permission checks.
 
-The client buys:
+A shared staff password/token is not sufficient for a commercial multi-user product.
 
-- workflow discovery,
-- configuration of one follow-up program,
-- demo environment,
-- synthetic/test patient scenarios,
-- staff workflow design,
-- pilot-readiness assessment,
-- implementation roadmap,
-- reserved founding-client pricing for the eventual live pilot.
+## 5.3 Patient management
 
-This engagement should not require real patient data initially.
+The product must support:
 
-The product can use synthetic patients such as:
+- patient list,
+- search,
+- patient creation/import,
+- patient detail,
+- phone number,
+- timezone,
+- active/inactive state,
+- communication state,
+- external/client patient identifier where needed.
 
-```text
-Maria Garcia
-Robert Patel
-Evelyn Chen
-Sam Wilson
-```
+## 5.4 Consent and communication preferences
 
-with clearly fictional information.
+The product must support the approved communication model, including as applicable:
 
-This gives you an honest product you can demonstrate while production controls are being completed.
+- consent evidence,
+- opt-out,
+- wrong number,
+- invalid number,
+- paused communication,
+- revocation history,
+- source/timestamp.
 
-## Stage B: controlled paid pilot
+The exact legal rules require appropriate review for the intended deployment.
 
-Once the minimum launch gate is met, run a narrow pilot with:
+## 5.5 Care program
 
-- one client organization,
-- one site or care team,
-- one approved care program,
-- a small patient cohort,
-- one geographic/legal operating model,
-- one telephony provider,
-- one voice/AI configuration,
-- human escalation,
-- restricted user roles,
-- defined support hours,
-- clear stop conditions.
-
-## Stage C: recurring product subscription
-
-After the pilot proves value and stability, convert the client to recurring access.
-
-Recurring value should include:
-
-- staff workspace,
-- patient management,
-- automated schedules,
-- voice check-ins,
-- escalation queue,
-- reporting,
-- audit trail,
-- support,
-- updates,
-- monitoring,
-- backups,
-- security maintenance.
-
-This is where predictable monthly revenue begins.
-
----
-
-# 5. What you can sell immediately without misleading anyone
-
-You can sell a "Founding Design Partner Program" before production completion.
-
-The offer could be described in plain English as:
-
-> We work with your care team to configure one automated patient follow-up workflow, demonstrate it with safe test data, validate the staff experience, and prepare a controlled live pilot. The live patient-data phase begins only after the agreed security, privacy, telephony, safety, and operational launch requirements are completed.
-
-The exact commercial price is a business decision.
-
-A sensible structure to test is:
-
-- one-time setup/implementation fee,
-- optional paid pilot fee,
-- recurring subscription after live launch,
-- usage component only if telephony/AI costs materially scale with use.
-
-Do not promise unlimited calling or unlimited AI usage until real costs are measured.
-
-Do not advertise a guaranteed clinical outcome.
-
-Do not claim full production or regulatory readiness until the applicable review is actually completed.
-
----
-
-# 6. What the client should receive immediately after signing
-
-A paying design partner should receive something concrete within the first engagement, even before live patient use.
-
-Deliverables should include:
-
-1. Their organization created in a non-production or controlled environment.
-2. Their logo/name/working hours configured where supported.
-3. Their first care program documented.
-4. Their approved question list entered into the program design.
-5. Their escalation process mapped.
-6. Their staff roles mapped.
-7. Synthetic patient records configured.
-8. Several complete simulated/test scenarios.
-9. A staff walkthrough.
-10. A written list of remaining live-pilot gates.
-11. A target live-pilot configuration.
-12. A named support/contact process.
-
-The client should feel that they bought a real implementation engagement, not a promise.
-
----
-
-# 7. The sellable demo that must exist first
-
-Before outbound sales, build one polished demonstration path.
-
-The demo must not require the developer to change database rows by hand between scenes.
-
-## Demo scene 1: clinic overview
-
-Show:
-
-- today's scheduled check-ins,
-- completed calls,
-- failed calls,
-- open escalations,
-- upcoming calls,
-- basic system state.
-
-## Demo scene 2: patient profile
-
-Show one patient with:
-
-- contact details,
-- consent/callability state,
-- care program,
-- next check-in,
-- recent call history,
-- open follow-up state.
-
-## Demo scene 3: scheduled call
-
-Use either:
-
-- a deterministic simulated call in early demos, or
-- a real test call to an approved test number once real telephony is ready.
-
-Show the call state move through the system.
-
-## Demo scene 4: normal completion
-
-Show:
-
-- transcript,
-- structured answers,
-- summary,
-- completed status.
-
-## Demo scene 5: concerning response
-
-Show a pre-built safety scenario.
+The first client needs at least one complete, versioned care program.
 
 Example:
 
-```text
-Patient reports a concerning symptom
-        |
-        v
-System stops routine automation as required
-        |
-        v
-Escalation is created
-        |
-        v
-Care team sees priority/reason/evidence
-        |
-        v
-Operator acknowledges and resolves
-```
+`48-Hour Post-Visit Follow-Up v1`
 
-## Demo scene 6: no-answer retry
+The system must know:
 
-Show that no answer is not silently treated as success.
+- which questions were approved,
+- which version was used,
+- which escalation policy was used,
+- which patient was enrolled,
+- when it was active.
 
-## Demo scene 7: opt-out
+## 5.6 Scheduling
 
-Show:
+The product must support:
 
-- patient requests no more calls,
-- communication state changes,
-- future schedule is suppressed,
-- audit event exists.
+- due time,
+- patient timezone,
+- allowed calling window,
+- retries,
+- pause/resume,
+- no-answer handling,
+- cancellation/opt-out behavior,
+- idempotent job execution.
 
-## Demo scene 8: report
+"Idempotent" means repeating the same scheduling job should not accidentally create duplicate calls for the same intended check-in.
 
-Show what management can learn:
+## 5.7 Real outbound telephony
 
+The complete product must make actual approved outbound telephone calls using the chosen provider.
+
+It must include:
+
+- real provider adapter,
+- provider authentication,
+- call creation,
+- lifecycle events,
+- official webhook verification,
+- duplicate event handling,
+- late/out-of-order event protection,
+- provider failure handling.
+
+The sandbox adapter remains useful for tests, but sandbox calls are not the commercial feature.
+
+## 5.8 Real voice runtime
+
+The system must support:
+
+- telephone audio connection,
+- speech recognition,
+- conversation flow,
+- text-to-speech,
+- interruption/barge-in where supported,
+- silence handling,
+- misunderstanding recovery,
+- low-confidence handling,
+- disconnect handling,
+- AI/provider failure behavior.
+
+## 5.9 Structured results
+
+After the call, the system must save useful structured outcomes rather than only raw conversation text.
+
+Examples:
+
+- call completed or incomplete,
+- patient response to approved questions,
+- callback requested,
+- opt-out requested,
+- escalation created,
+- retry required,
+- summary suitable for staff review.
+
+## 5.10 Safety policy
+
+The system must have defined safety behavior.
+
+AI must not be the only safety mechanism.
+
+Use:
+
+- deterministic high-priority rules,
+- structured classification where useful,
+- confidence rules,
+- schema validation,
+- allowed-action rules,
+- output validation,
+- human handoff.
+
+## 5.11 Durable human escalation
+
+When a case needs a person, the escalation must become real work in the application.
+
+It must have:
+
+- patient,
+- source call,
+- priority,
+- reason,
+- evidence,
+- assignee,
+- status,
+- created time,
+- acknowledgment,
+- resolution,
+- resolution note,
+- resolver,
+- resolved time.
+
+## 5.12 Today / work queue
+
+A care coordinator should open the product and immediately understand:
+
+- urgent cases,
+- routine follow-ups,
+- retry exhausted cases,
+- upcoming calls,
+- completed work,
+- important system problems.
+
+## 5.13 Patient 360
+
+One page should show:
+
+- patient basics,
+- communication/consent state,
+- program enrollment,
+- next check-in,
+- recent calls,
+- escalations,
+- timeline.
+
+## 5.14 Call detail
+
+A user must be able to understand what happened in one call.
+
+Include:
+
+- call status,
+- attempts,
+- timing,
+- provider state,
+- transcript where allowed,
+- structured result,
+- safety events,
+- escalation,
+- event timeline,
+- relevant audit history.
+
+## 5.15 Escalation queue
+
+Staff must be able to:
+
+- filter,
+- assign,
+- acknowledge,
+- resolve,
+- understand age/priority,
+- see routing failure.
+
+## 5.16 Patient import
+
+The first production package should not require developer-written SQL to add patients.
+
+CSV import is sufficient for the first version if it includes:
+
+- upload,
+- preview,
+- validation,
+- row-level errors,
+- confirmation,
+- safe import.
+
+## 5.17 Reporting
+
+Provide useful operational reporting, at minimum:
+
+- scheduled,
 - attempted,
 - reached,
 - completed,
+- no answer,
+- failed,
 - escalated,
 - unresolved,
-- opt-outs.
+- opt-outs,
+- basic escalation timing.
 
-A buyer should understand the product without reading code.
+## 5.18 Audit history
+
+Important staff/admin actions should be attributable to a person.
+
+Examples:
+
+- patient viewed/changed,
+- opt-out changed,
+- schedule changed,
+- escalation assigned/resolved,
+- settings changed,
+- report exported,
+- role changed.
+
+## 5.19 Client administration
+
+The client should be able to perform routine operations without the founder changing source code.
+
+At minimum:
+
+- manage routine users,
+- configure approved calling settings,
+- manage escalation contacts/settings,
+- view allowed program/configuration information,
+- pause outbound activity through appropriate controls.
+
+## 5.20 Production operations
+
+The product must include:
+
+- automated tests,
+- CI,
+- staging,
+- release procedure,
+- monitoring,
+- alerts,
+- backups,
+- restore test,
+- rollback,
+- runbooks,
+- emergency outbound call stop.
+
+If we sell this exact V1 package, these items are not optional afterthoughts. They are part of the complete product.
 
 ---
 
-# 8. The first buyer profile
+# 6. What is explicitly not part of the first product
 
-Do not start by targeting the largest hospital systems.
+Completeness does not require unlimited scope.
 
-Large health systems often have:
+The first product does **not** automatically include:
 
-- long procurement cycles,
-- security reviews,
-- legal reviews,
-- integration requirements,
-- vendor-management requirements,
-- complex identity systems,
-- architecture boards,
-- multiple stakeholders.
+- native iOS app,
+- native Android app,
+- WhatsApp,
+- SMS automation,
+- inbound voice contact center,
+- every EHR,
+- Epic integration,
+- Athena integration,
+- custom insurance workflows,
+- billing/claims,
+- diagnosis,
+- clinical decision support,
+- medication changes,
+- custom speech models,
+- ten languages,
+- predictive population health,
+- Kubernetes,
+- Kafka,
+- many microservices.
 
-That can kill early speed.
+These are not "unfinished features" if they were never included in the agreed V1 scope.
 
-## Better early targets
+That distinction is critical.
 
-Start with organizations where the decision maker is closer to daily operations, for example:
+A project can be fully complete with a deliberately narrow scope.
+
+---
+
+# 7. The acceptance matrix
+
+Before implementation begins for a paying client, create an acceptance matrix.
+
+Example:
+
+| Feature | Included? | Acceptance test | Status |
+|---|---|---|---|
+| Staff login | Yes | Valid user can sign in; disabled user cannot | Pending |
+| Patient import | Yes | Valid CSV imports; invalid rows show errors | Pending |
+| Scheduling | Yes | Due patient generates one call inside allowed window | Pending |
+| Real calling | Yes | Approved test number receives call | Pending |
+| Voice check-in | Yes | Complete approved conversation successfully | Pending |
+| Opt-out | Yes | Patient opt-out suppresses future calls | Pending |
+| Escalation | Yes | Safety scenario creates durable queue item | Pending |
+| Patient 360 | Yes | User sees live patient history | Pending |
+| Reports | Yes | Metrics match test dataset | Pending |
+| Audit log | Yes | Sensitive actions appear with correct actor | Pending |
+
+The client scope is commercially complete only when every **Included = Yes** row passes.
+
+Not when most rows pass.
+
+---
+
+# 8. Definition of Complete
+
+Every feature needs more than visible UI.
+
+A feature is complete only when all applicable parts are done.
+
+## Product behavior
+
+- intended user can perform the workflow,
+- edge states are understandable,
+- errors have useful messages,
+- mobile/desktop behavior is acceptable where required.
+
+## Backend
+
+- required API/service behavior exists,
+- validation exists,
+- permission checks exist,
+- external failures are handled.
+
+## Database
+
+- data persists correctly,
+- ownership/relationships are correct,
+- migrations exist,
+- data integrity rules exist.
+
+## Security
+
+- authentication is enforced,
+- authorization is enforced,
+- organization ownership is checked,
+- secrets are protected,
+- sensitive logging is avoided.
+
+## Testing
+
+- unit tests where appropriate,
+- database/integration tests where appropriate,
+- API tests,
+- permission tests,
+- end-to-end tests for critical workflows.
+
+## Operations
+
+- logs/metrics exist where needed,
+- failure is detectable,
+- support can identify what happened,
+- runbook exists for important failure modes.
+
+## Documentation
+
+- user/admin behavior is documented,
+- operational behavior is documented where necessary.
+
+A ticket marked "done" because the React screen exists but the live API is missing is not complete.
+
+A call feature marked "done" because a mock provider returns success is not complete.
+
+---
+
+# 9. The fastest revenue strategy under the complete-scope rule
+
+Because we are not using partial paid delivery, speed comes from four things:
+
+## 9.1 Keep the first product scope narrow
+
+Do not promise 50 features.
+
+Promise the smallest complete workflow that solves a valuable client problem.
+
+## 9.2 Standardize the product
+
+Build one reusable package for similar clinics instead of ten custom versions.
+
+## 9.3 Do buyer discovery while building
+
+You can talk to buyers before billing them.
+
+Use those conversations to validate:
+
+- problem,
+- scope,
+- buyer,
+- objections,
+- security requirements,
+- procurement requirements,
+- willingness to buy after completion.
+
+## 9.4 Parallelize independent engineering work
+
+Once architecture contracts are frozen, separate workstreams can progress together:
+
+- identity/tenancy,
+- patient/consent,
+- telephony/voice,
+- care-team UI,
+- testing/operations.
+
+The answer to "ASAP" is not partial delivery.
+
+The answer is **better scope control plus parallel execution**.
+
+---
+
+# 10. The first buyer profile
+
+Do not start with the largest hospital system.
+
+Large systems may require:
+
+- long procurement,
+- complex security review,
+- enterprise SSO,
+- EHR integration,
+- vendor governance,
+- legal review,
+- architecture review,
+- many stakeholders.
+
+That can delay the first complete sale even if the software is good.
+
+Better early targets include:
 
 - independent urgent-care groups,
 - small multi-site clinics,
 - outpatient practices,
-- specialty clinics with repetitive follow-up workflows,
+- specialty clinics,
 - care-management organizations,
-- concierge or membership practices,
-- organizations willing to begin with test/synthetic data while procurement is completed.
+- practices with repetitive post-visit calls.
 
-The ideal early buyer has a painful repetitive phone workflow and an identifiable person who owns that workflow.
+The ideal buyer has:
 
-Potential champions include:
-
-- operations manager,
-- clinic administrator,
-- care coordination manager,
-- nursing operations leader,
-- patient-experience leader,
-- medical director interested in operational improvement.
-
-The exact user and buyer need to be validated through interviews.
+- a repeated manual phone workflow,
+- enough volume that automation matters,
+- an operations owner,
+- authority to adopt software,
+- manageable integration requirements,
+- willingness to start with the standard V1 package.
 
 ---
 
-# 9. The discovery questions to ask before building custom features
+# 11. Discovery is allowed before the product is complete
 
-Do not ask a potential client:
+The no-partial-charging rule should not turn into "do not talk to customers until launch."
 
-> Would you use an AI voice agent?
+That would create a different risk: building the wrong complete product.
 
-That invites vague positive answers.
+Use pre-launch conversations for learning.
 
-Ask about current behavior.
+Ask:
 
-Examples:
-
-- Which patient calls does your team make repeatedly every day or week?
-- Who makes those calls today?
-- Roughly how many are attempted?
-- What happens when nobody answers?
-- What information do staff collect?
+- Which calls do staff repeatedly make?
+- How many per day/week?
+- What information is collected?
+- What happens after no answer?
 - Which answers require human follow-up?
-- How are those follow-ups tracked today?
-- Where do calls fall through the cracks?
-- How do you document that a patient was contacted?
-- What makes this workflow expensive or frustrating?
-- Which workflow would you automate first if you trusted the system?
-- What information are you unwilling to let automation handle?
-- Who must approve a live pilot?
-- What security/privacy documents will procurement request?
-- What would make you stop a pilot immediately?
-- What result would make the pilot clearly worth paying for?
+- How do you track that follow-up today?
+- What makes the workflow frustrating?
+- Which users need access?
+- What reports matter?
+- What security review is required?
+- What integrations are mandatory versus nice-to-have?
+- What would prevent you from buying the completed product?
+- If the agreed complete scope works as demonstrated, who approves the purchase?
 
-The answers should drive implementation priorities.
+The important commercial shift is:
 
----
-
-# 10. Do not build custom features for every prospect
-
-Early clients will ask for many things.
-
-Examples:
-
-- SMS,
-- WhatsApp,
-- appointment booking,
-- Epic,
-- Athenahealth,
-- custom reports,
-- custom roles,
-- custom voice,
-- ten languages,
-- inbound calls,
-- insurance workflows,
-- billing workflows.
-
-Use this filter:
-
-## Build now if
-
-- it is required for the first narrow workflow to function safely,
-- it is likely to be needed by several clients,
-- it materially improves conversion or retention,
-- it removes recurring manual operations from your team.
-
-## Delay if
-
-- only one prospect asked for it,
-- it introduces a major integration before a contract exists,
-- it creates clinical or legal scope expansion,
-- it turns the product into a custom-services company,
-- it makes the architecture significantly more complex without helping the first use case.
-
-A recurring software business is difficult to build if every client receives a different codebase.
+> Use early conversations to define what to finish, not as a reason to charge for unfinished delivery.
 
 ---
 
-# 11. Current-state to first polished demo plan
+# 12. How to handle a client who asks for 10 features
 
-This is the fastest engineering path to something worth showing repeatedly.
+This is the exact scenario behind the founder rule.
 
-## Step 1: freeze the product story
+Suppose a client asks for:
 
-Use one product sentence:
+1. patient import,
+2. two user roles,
+3. automated follow-up scheduling,
+4. voice calling,
+5. custom question set,
+6. opt-out,
+7. escalation queue,
+8. CSV report,
+9. Athena integration,
+10. Spanish language support.
 
-> CheckIn Care automates routine post-visit patient check-ins and gives care teams a prioritized human follow-up queue when automation should not continue alone.
+Do **not** immediately accept all 10.
 
-Do not keep changing the pitch every week.
+First classify them.
 
-## Step 2: remove misleading demo behavior
+## Core product features
 
-The demo must clearly label simulated versus live functionality.
+Likely reusable:
 
-Replace accidental hardcoded/sample behavior with an intentional demo-data system.
+1. patient import,
+2. user roles,
+3. scheduling,
+4. voice calling,
+5. program questions,
+6. opt-out,
+7. escalation,
+8. reporting.
 
-For example:
+## Expansion features
+
+Potentially larger scope:
+
+9. Athena integration,
+10. Spanish production support.
+
+Then negotiate one of two honest scopes.
+
+### Scope A
+
+The client buys the standard V1 with features 1-8.
+
+Features 9-10 are explicitly excluded from the first contract and may be proposed later.
+
+If the client accepts Scope A, delivering features 1-8 is complete delivery.
+
+### Scope B
+
+The client says 9 and 10 are mandatory.
+
+If CheckIn Care agrees, all 10 become the contract.
+
+Then **all 10 must be complete before that agreed product is treated as delivered**.
+
+Do not quietly convert Scope B into Scope A after work begins.
+
+---
+
+# 13. Change-request policy
+
+Scope changes will happen.
+
+The rule should be:
+
+## Before scope freeze
+
+Requirements can change freely while evaluating fit.
+
+## After scope freeze
+
+New requests are not silently inserted into the existing delivery.
+
+A new request should be classified as:
+
+- defect in agreed behavior,
+- clarification of agreed behavior,
+- new feature,
+- future expansion.
+
+### Defect
+
+Fix it before acceptance.
+
+### Clarification
+
+Resolve against the written acceptance criteria.
+
+### New feature
+
+Create a new scope/version. Do not let it indefinitely delay an already agreed complete product unless both parties intentionally amend the agreement.
+
+### Future expansion
+
+Keep it outside current acceptance.
+
+This protects completeness without allowing infinite scope growth.
+
+---
+
+# 14. No prorated feature delivery rule
+
+Default commercial policy:
+
+> We do not reduce a complete-product invoice because agreed features are unfinished. We finish the agreed features first.
+
+This is different from usage billing.
+
+After launch, variable charges for actual telephony/AI usage may still be appropriate because usage is an operating cost model, not a partial-delivery discount.
+
+It is also different from separately purchased add-ons.
+
+If a client bought:
+
+- Core Product, and
+- EHR Integration Add-On,
+
+these can be separate complete commercial packages if the contract clearly defines them that way.
+
+But each package should have its own completion criteria.
+
+---
+
+# 15. Sales model before completion
+
+You can still build a pipeline immediately.
+
+The preferred pre-completion sales process is:
 
 ```text
-DEMO_MODE=true
+Prospect identified
+-> discovery
+-> product demonstration
+-> scope fit
+-> security/procurement discovery
+-> complete-scope proposal
+-> conditional commitment / signed agreement as appropriate
+-> implementation to full acceptance
+-> production activation
+-> billing / recurring subscription
 ```
 
-should load clearly fictional organizations, patients, calls, and escalations.
+The exact contract and billing structure should be reviewed appropriately for the business and jurisdiction.
 
-Do not let hardcoded sample data look like production API data.
+The product documentation should not pretend to be legal advice.
 
-## Step 3: create the Today screen
+---
 
-A buyer should immediately see:
+# 16. Demo strategy
+
+A demo can exist before the complete production product.
+
+The demo should use synthetic/test data until real-data handling is approved.
+
+The demo is a sales and requirements tool, not a partially delivered paid product.
+
+## Demo scene 1: Today
+
+Show:
 
 - urgent follow-ups,
 - routine follow-ups,
-- failed/retry-exhausted calls,
+- failed/retry exhausted calls,
 - upcoming calls,
 - completed calls.
 
-## Step 4: create Patient 360
+## Demo scene 2: Patient 360
 
-One screen should explain the patient relationship.
+Show:
 
-## Step 5: create Call Detail
+- contact,
+- callability/consent state,
+- program,
+- next check-in,
+- call history,
+- escalation history.
 
-Make the call explainable from beginning to end.
+## Demo scene 3: real or clearly simulated call
 
-## Step 6: create Escalations
+Until real telephony is complete, label simulated behavior clearly.
 
-This is mandatory for the product story.
+Once real calling exists, use approved test numbers.
 
-## Step 7: create one Care Program
+## Demo scene 4: routine completion
 
-Hardcoding one approved initial template is acceptable before a full visual builder, as long as it is versioned and the product knows exactly which version ran.
+Show:
 
-## Step 8: create one-click demo reset
+- transcript,
+- structured result,
+- status,
+- staff summary.
 
-A salesperson should be able to reset demo state without engineering help.
+## Demo scene 5: escalation
 
-## Step 9: create demo scripts
+Show:
 
-Document exactly what to show during a 10-minute, 20-minute, and 45-minute demonstration.
+- concerning response,
+- safety rule,
+- escalation creation,
+- staff queue,
+- resolution.
 
-## Step 10: create a public-facing product page or sales deck
+## Demo scene 6: no answer
 
-The buyer should have something understandable to review after the call.
+Show retry behavior.
+
+## Demo scene 7: opt-out
+
+Show future calls being stopped.
+
+## Demo scene 8: reporting
+
+Show management value.
 
 ---
 
-# 12. Current-state to controlled paid pilot plan
+# 17. Engineering sequence optimized for full delivery
 
-A paid pilot requires more than a polished demo.
+## Milestone 0: architecture reconciliation
 
-The minimum engineering scope should include the following.
+Complete:
 
-## Foundation
-
+- `docs/repo_context.md`,
 - canonical organization model,
-- organization ownership on protected records,
 - canonical patient model,
-- canonical call session and call attempt model,
-- canonical audit event model,
-- migration reconciliation.
+- canonical call/session/attempt model,
+- canonical audit model,
+- migration strategy,
+- first telephony provider decision,
+- voice integration decision,
+- role model,
+- safety boundary,
+- initial client geography/use case.
 
-## Identity and permissions
+Exit rule:
 
-- individual user accounts,
-- secure sessions,
+No critical production feature starts on top of unresolved duplicate core models.
+
+## Milestone 1: identity and tenancy
+
+Complete:
+
+- organizations,
+- users,
+- sessions,
+- roles,
 - server-side authorization,
-- required role model,
-- disabled-user handling,
-- cross-organization isolation tests.
+- tenant ownership checks,
+- protected routes,
+- cross-organization tests.
 
-## Patient communication safety
+Exit rule:
 
-- callability state,
+Clinic A cannot access Clinic B protected records through UI or direct API calls.
+
+## Milestone 2: patient and consent
+
+Complete:
+
+- canonical patient,
+- contact state,
+- callability,
+- consent/evidence model,
 - opt-out,
 - wrong number,
-- invalid phone,
+- patient list/search/detail,
+- CSV import foundation.
+
+Exit rule:
+
+Scheduling, calls, and staff UI all use the same database-backed patient identity.
+
+## Milestone 3: care program and scheduling
+
+Complete:
+
+- one versioned program,
+- enrollment,
+- schedule,
+- timezone,
+- call windows,
+- retry rules,
 - pause/resume,
-- consent/evidence model appropriate to the approved pilot.
+- idempotent scheduler,
+- job-run visibility.
 
-## Telephony
+Exit rule:
 
-- one real provider,
-- outbound calls,
+A due enrolled patient produces exactly the intended check-in work.
+
+## Milestone 4: production telephony
+
+Complete:
+
+- provider interface,
+- real outbound adapter,
 - official webhook verification,
-- deduplication,
-- allowed state transitions,
-- timeout/error handling,
-- provider health visibility.
+- event deduplication,
+- state transition protection,
+- timeouts/failures,
+- test provider retained.
 
-## Voice runtime
+Exit rule:
 
-- real audio connection,
-- speech recognition,
+Approved test numbers can receive real tracked calls reliably.
+
+## Milestone 5: production voice runtime
+
+Complete:
+
+- audio stream,
+- STT,
 - conversation workflow,
-- text-to-speech,
-- interruption handling,
-- silence handling,
-- uncertainty handling,
-- safe failure behavior.
+- TTS,
+- interruption,
+- silence,
+- misunderstanding recovery,
+- low confidence,
+- provider/AI failure,
+- structured output.
 
-## Safety
+Exit rule:
 
-- deterministic high-priority rules,
-- approved AI classification where needed,
-- schema validation,
-- safe model-output handling,
-- human-request handling,
-- escalation creation.
+A test patient can complete the approved program by telephone and create correct persisted results.
 
-## Care-team workflow
+## Milestone 6: safety and escalation
 
-- Today queue,
+Complete:
+
+- high-priority rules,
+- model validation,
+- human request,
+- escalation model,
+- queue,
+- assign,
+- acknowledge,
+- resolve,
+- routing failure,
+- unavailable human behavior.
+
+Exit rule:
+
+Every approved synthetic safety case results in the expected durable human workflow.
+
+## Milestone 7: care-team product
+
+Complete:
+
+- Today,
 - Patients,
 - Patient 360,
 - Calls,
 - Call Detail,
 - Escalations,
-- resolution actions,
-- audit history.
+- Admin settings required for V1,
+- understandable error states.
 
-## Operations
+Exit rule:
 
-- automated tests,
+A care coordinator can perform routine daily work without engineering intervention.
+
+## Milestone 8: onboarding and reporting
+
+Complete:
+
+- client setup,
+- user setup,
+- patient CSV import,
+- program enrollment,
+- configuration validation,
+- reports,
+- audit search,
+- launch readiness view/checklist.
+
+Exit rule:
+
+A second similar client could be set up without manually writing database records.
+
+## Milestone 9: tests and AI evaluation
+
+Complete:
+
+- unit tests,
+- PostgreSQL integration tests,
+- API tests,
+- authorization tests,
+- webhook tests,
+- voice scenarios,
+- AI evaluations,
+- browser E2E tests.
+
+Exit rule:
+
+Critical journeys fail the automated build when behavior regresses.
+
+## Milestone 10: production operations
+
+Complete:
+
 - CI,
 - staging,
-- production deployment process,
-- structured logs,
-- metrics,
+- deployment,
+- smoke tests,
+- feature flags where useful,
+- monitoring,
 - alerts,
 - backups,
 - restore test,
 - rollback,
-- emergency outbound-call stop control.
+- incident runbooks,
+- kill switch.
 
-## Client readiness
+Exit rule:
 
-- onboarding checklist,
-- test-user/test-patient process,
-- support route,
-- client-specific configuration,
-- data-retention direction,
-- applicable security/privacy/legal/clinical review.
+The team can detect, pause, understand, and recover from major failures.
 
-The pilot cannot be considered safe because a happy-path call worked once.
+## Milestone 11: complete client acceptance
 
----
+Complete:
 
-# 13. The minimum live-pilot launch gate
+- every V1 acceptance row,
+- security review,
+- operational review,
+- applicable privacy/legal/telephony/clinical review,
+- client UAT,
+- launch approval.
 
-Before the first real client depends on the product, the following must be true.
-
-## Organization and access
-
-- [ ] every protected record has correct organization ownership,
-- [ ] users have individual accounts,
-- [ ] protected APIs require authentication,
-- [ ] role/ownership checks run server-side,
-- [ ] Clinic A cannot access Clinic B data,
-- [ ] disabled users cannot continue accessing the system.
-
-## Patient communication
-
-- [ ] patient phone validation exists,
-- [ ] opt-out works from both staff and patient workflow,
-- [ ] future calls stop after opt-out,
-- [ ] wrong-number flow exists,
-- [ ] retry limits exist,
-- [ ] call windows/timezones are respected,
-- [ ] applicable consent/disclosure approach has been reviewed.
-
-## Real call
-
-- [ ] real outbound call works,
-- [ ] provider webhooks are cryptographically/officially verified as applicable,
-- [ ] duplicate events do not duplicate business actions,
-- [ ] late/out-of-order events do not corrupt final state,
-- [ ] provider failure has a visible recovery path.
-
-## Voice
-
-- [ ] ordinary call completes,
-- [ ] silence does not create an infinite loop,
-- [ ] interruption works acceptably,
-- [ ] repeated misunderstanding fails safely,
-- [ ] AI/provider failure does not invent medical guidance,
-- [ ] partial results survive unexpected disconnect where useful.
-
-## Safety and escalation
-
-- [ ] each approved high-priority synthetic scenario has a deterministic expected outcome,
-- [ ] escalation persists in the database,
-- [ ] escalation appears in the staff queue,
-- [ ] staff can acknowledge/assign/resolve it,
-- [ ] unresolved escalations cannot silently disappear,
-- [ ] unavailable-human behavior is defined.
-
-## Operations
-
-- [ ] critical automated tests pass,
-- [ ] CI is required for changes,
-- [ ] staging exists,
-- [ ] release process is documented,
-- [ ] production can be rolled back,
-- [ ] monitoring detects major failures,
-- [ ] backups are automated,
-- [ ] a restore has actually been tested,
-- [ ] emergency pause/stop control works.
-
-## External approval
-
-- [ ] applicable client security requirements are known,
-- [ ] applicable privacy/contract requirements are known,
-- [ ] applicable telephony/recording rules are reviewed,
-- [ ] applicable clinical/safety boundaries are approved,
-- [ ] vendor/provider contractual requirements are satisfied for the intended data/use case.
-
-If these conditions are not met, sell the design-partner phase, not the production deployment.
+Only after this milestone should the agreed production scope be called delivered.
 
 ---
 
-# 14. The first pilot should be deliberately small
+# 18. Aggressive 30-day push under the no-partial-delivery rule
 
-Do not launch the first live client across an entire organization.
+This is an aggressive target, not a promise.
 
-Recommended shape:
+The exact duration depends on provider integration, external reviews, existing code quality, and client requirements.
+
+## Days 1-3
+
+Freeze:
+
+- first client package,
+- exact V1 feature list,
+- acceptance matrix,
+- architecture decisions,
+- explicit exclusions.
+
+Engineering:
+
+- reconcile canonical models,
+- separate demo data from production paths,
+- remove misleading completion claims,
+- create development branches/tickets around complete vertical slices.
+
+Commercial:
+
+- start buyer discovery,
+- show clearly labeled demo,
+- collect procurement/security requirements,
+- do not invoice for incomplete product delivery.
+
+## Days 4-7
+
+Parallel work:
+
+### Track A
+
+Organizations, users, roles, tenant authorization.
+
+### Track B
+
+Patient, consent, callability, CSV import model.
+
+### Track C
+
+Call/schedule model, scheduler, retry behavior.
+
+### Track D
+
+Care-team live UI architecture and removal of hardcoded production-like sample state.
+
+Goal:
+
+Complete the core data/security foundation quickly enough that later features do not need rewrites.
+
+## Week 2
+
+Build:
+
+- real telephony adapter,
+- signed/verified webhook handling,
+- real call lifecycle,
+- voice runtime vertical slice,
+- structured result persistence.
+
+In parallel:
+
+- Today,
+- Patient 360,
+- Call Detail,
+- Escalation UI connected to live APIs.
+
+## Week 3
+
+Finish:
+
+- safety rules,
+- durable escalation,
+- opt-out,
+- no-answer/retry,
+- call-me-later if included in frozen scope,
+- onboarding,
+- CSV validation,
+- admin settings required for V1,
+- reporting,
+- audit.
+
+Begin full-system tests.
+
+## Week 4
+
+Finish:
+
+- missing acceptance rows,
+- E2E tests,
+- AI evaluations,
+- security tests,
+- CI/CD,
+- staging,
+- production monitoring,
+- backup/restore,
+- rollback,
+- runbooks,
+- launch checklist,
+- client UAT preparation.
+
+If any included V1 feature remains incomplete at day 30, it remains a blocker rather than a reason to prorate the product.
+
+External healthcare/security/legal approvals may extend the calendar. Engineering speed cannot force an external approval to exist.
+
+---
+
+# 19. Parallelization rules
+
+To move faster without lowering completeness:
+
+## Parallelize independent modules
+
+Examples:
+
+- auth/tenancy,
+- patient/consent,
+- frontend screens,
+- telephony adapter,
+- tests/CI scaffolding.
+
+## Do not parallelize unresolved contracts
+
+Do not have three engineers independently invent:
+
+- three patient models,
+- three call schemas,
+- separate status vocabularies.
+
+Freeze shared interfaces first.
+
+## Merge small complete changes
+
+A small commit can be part of a larger feature.
+
+But the feature is not commercially complete until the vertical slice passes its full acceptance criteria.
+
+---
+
+# 20. Ticket strategy
+
+Each ticket should be small enough to execute and review, but tickets must roll up into feature completion.
+
+Example feature:
+
+`Patient opt-out`
+
+Possible tickets:
+
+1. add communication-state schema,
+2. add opt-out service action,
+3. expose authenticated API,
+4. add voice opt-out event handling,
+5. suppress future schedules,
+6. add staff UI,
+7. add audit event,
+8. add database/API/E2E tests.
+
+Do not mark the **feature** complete after ticket 3.
+
+All required tickets must pass.
+
+---
+
+# 21. Complete product versus complete company
+
+A complete V1 product does not mean the company has every future capability.
+
+The V1 can be complete while future roadmap items remain.
+
+Example:
 
 ```text
-1 organization
-1 site/team
-1 care program
-1 small cohort
-1 telephony provider
-1 voice configuration
-1 escalation workflow
-limited staff users
-short observation period
+V1 COMPLETE
+- one post-visit program
+- voice channel
+- CSV import
+- staff operations
+- safety/escalation
+- reporting
+
+V2 FUTURE
+- SMS
+- FHIR
+- selected EHR
+- additional programs
+- SSO
+- more languages
 ```
 
-The exact cohort size should be agreed with the client based on operational capacity and safety review.
-
-The purpose of the first pilot is not maximum call volume.
-
-It is to prove:
-
-- the workflow works,
-- staff understand it,
-- patients can interact with it,
-- escalations are manageable,
-- failures are visible,
-- value can be measured,
-- the product can be operated repeatedly.
+The key is that V2 items were not promised as V1 deliverables.
 
 ---
 
-# 15. Define success before the pilot begins
+# 22. Pricing after complete delivery
 
-Never run a pilot where success means "the client liked it."
+Exact pricing is a founder/market decision.
 
-Agree on measurable outcomes.
-
-Possible operational metrics include:
-
-- patients scheduled,
-- call attempts,
-- patient reach rate,
-- completion rate,
-- no-answer rate,
-- retry success rate,
-- opt-out rate,
-- escalation rate,
-- escalation acknowledgment time,
-- escalation resolution time,
-- staff-reported time saved,
-- staff corrections to AI-produced structure/summary,
-- voice failure rate,
-- system failure rate.
-
-Do not claim clinical benefit unless the pilot was actually designed and approved to measure that outcome.
-
-For the first commercial case study, operational outcomes are enough.
-
----
-
-# 16. What makes a pilot convert into recurring revenue
-
-A buyer keeps paying when the system becomes part of a repeated workflow.
-
-Therefore the product should reduce recurring work.
-
-The strongest conversion signals are:
-
-- staff use the Today queue regularly,
-- calls happen automatically without manual triggering,
-- failed calls are visible and recoverable,
-- care-team members resolve escalations inside the product,
-- managers use reporting,
-- adding new patients does not require engineering,
-- adding staff does not require engineering,
-- changing safe business configuration does not require engineering,
-- support requests decrease rather than increase,
-- the client asks to expand the cohort/site/program.
-
-The weakest conversion signal is:
-
-> The demo looked impressive.
-
-Demos create interest.
-
-Repeated operational value creates recurring revenue.
-
----
-
-# 17. The recurring pricing model should match the value and cost model
-
-Do not over-engineer pricing before the first buyers.
-
-Test a simple model.
+The model should be simple enough for the first clients.
 
 Possible structure:
 
 ```text
-Monthly platform fee
+Monthly platform subscription
 +
-usage allowance
+Included usage allowance
 +
-additional usage if needed
+Additional usage if applicable
 ```
 
 or:
 
 ```text
-Monthly fee based on active patients / completed check-ins / site
+Monthly fee per site / active patient band / completed check-in band
 ```
 
-Avoid pricing based on technical units the buyer does not understand, such as raw tokens.
+Avoid raw-token pricing because buyers generally care about workflows, not model tokens.
 
-Track real internal unit economics:
+Track internal unit economics:
 
 ```text
 Revenue
-- telephony cost
-- STT cost
-- AI cost
-- TTS cost
+- telephony
+- STT
+- LLM
+- TTS
 - infrastructure
-- support/operations time
+- support operations
 = contribution margin
 ```
 
-"Contribution margin" means the amount left after the variable costs required to serve the client.
+Do not hide incomplete product delivery inside a discount.
 
-Do not offer a low flat price with unlimited usage until these costs are measured.
-
----
-
-# 18. Revenue packages to test
-
-The following are packaging hypotheses, not market facts.
-
-## Package 1: Founding Design Partner
-
-Client buys:
-
-- workflow discovery,
-- one program design,
-- configured demonstration,
-- synthetic scenario validation,
-- implementation plan,
-- reserved pilot slot.
-
-Commercial shape:
-
-- one-time fee.
-
-This gets revenue before real-patient production readiness.
-
-## Package 2: Controlled Pilot
-
-Client buys:
-
-- limited live deployment,
-- defined cohort/site/program,
-- implementation/configuration,
-- onboarding,
-- monitoring/support,
-- pilot reporting.
-
-Commercial shape:
-
-- setup fee plus pilot fee.
-
-## Package 3: Production Subscription
-
-Client buys:
-
-- ongoing platform access,
-- scheduled outreach,
-- staff workflow,
-- reporting,
-- support,
-- operational maintenance.
-
-Commercial shape:
-
-- recurring monthly/annual subscription,
-- optionally with usage component.
-
-## Package 4: Expansion
-
-Client buys:
-
-- additional sites,
-- additional programs,
-- larger patient population,
-- advanced integrations,
-- enterprise identity/integration requirements.
-
-Do not build Package 4 before Packages 1-3 prove demand.
+Discounts should be intentional commercial decisions, not compensation for missing agreed features.
 
 ---
 
-# 19. Sales materials that must exist
+# 23. Complete package options
 
-Engineering alone will not create revenue.
+Instead of partial feature billing, define separate complete packages.
 
-Before serious outreach, create:
+## Package A: Core Post-Visit Follow-Up
 
-## One-page product overview
+A fully completed standard product.
 
-Explain:
+Includes the frozen V1 features.
 
-- problem,
-- target workflow,
-- how it works,
-- what the care team sees,
-- what automation will and will not do,
-- pilot approach.
+## Package B: Additional Site Expansion
 
-## Demo script
+A complete expansion package for another site/team.
 
-A repeatable walkthrough.
+## Package C: Additional Care Program
 
-## Short recorded demo
+A complete approved additional care-program package.
 
-A buyer should be able to forward it internally.
+## Package D: Integration Add-On
 
-## Pilot proposal template
+A complete specific integration such as a future EHR/API integration.
 
-Include:
+Each package should have:
 
-- scope,
-- client responsibilities,
-- your responsibilities,
-- timeline/milestones,
-- data assumptions,
-- support model,
-- success metrics,
-- exclusions,
-- commercial terms placeholders.
+- defined scope,
+- defined acceptance criteria,
+- clear completion state.
 
-## Security overview
-
-Explain the architecture and current controls truthfully.
-
-## Data-flow diagram
-
-Show where patient data moves.
-
-## FAQ
-
-Answer:
-
-- What happens if the AI fails?
-- Can the AI diagnose?
-- What happens when a patient requests a human?
-- How do opt-outs work?
-- Where is data stored?
-- Who can access transcripts?
-- What happens if a call fails?
-- How does your team support the system?
-
-## Client-readiness checklist
-
-Use `10-client-readiness-checklist.md` internally and share an appropriate client-facing version.
+This allows commercial flexibility without selling incomplete pieces of one package.
 
 ---
 
-# 20. Product language to use and language to avoid
+# 24. Client readiness gate
 
-## Better language
+Before billing begins for the production product, verify the complete scope and the broader production conditions.
 
-- automated patient follow-up,
-- routine check-in automation,
-- care-team follow-up queue,
-- human escalation,
-- structured patient responses,
-- approved care program,
-- non-diagnostic workflow,
-- operational reporting.
+## Commercial completeness
 
-## Risky or misleading language before evidence/approval
+- [ ] all contracted V1 features are implemented,
+- [ ] all contracted V1 features pass acceptance tests,
+- [ ] no contracted feature is represented only by a mock unless the contract explicitly defines it as test-only,
+- [ ] no contracted staff screen depends on hardcoded demo data,
+- [ ] all required client configuration exists,
+- [ ] all explicit exclusions remain clearly documented.
 
-Avoid claiming:
+## Organization and access
 
-- "replaces nurses",
-- "diagnoses patients",
-- "guarantees patient safety",
-- "fully HIPAA compliant" without the required context/review,
-- "zero hallucinations",
-- "never misses urgent cases",
-- "works with every EHR",
-- "fully autonomous medical agent",
-- "production-ready" before the launch checklist passes.
+- [ ] every protected record has correct organization ownership,
+- [ ] users have individual accounts,
+- [ ] APIs require authentication,
+- [ ] server-side authorization is enforced,
+- [ ] cross-organization access tests pass,
+- [ ] disabled-user behavior works.
 
-Trust is an asset in healthcare sales.
+## Patient communication
 
-Do not sacrifice it for a stronger demo sentence.
+- [ ] phone validation,
+- [ ] consent/callability model,
+- [ ] opt-out,
+- [ ] wrong-number handling,
+- [ ] retry limits,
+- [ ] timezones/call windows,
+- [ ] approved disclosure/consent approach where applicable.
 
----
+## Telephony
 
-# 21. The first customer does not need every future feature
+- [ ] real calls work,
+- [ ] provider callbacks are verified,
+- [ ] duplicate callbacks are safe,
+- [ ] late callbacks cannot regress state,
+- [ ] provider outage behavior is known.
 
-The first production client does not need:
+## Voice
 
-- native iOS/Android apps,
-- Kafka,
-- Kubernetes,
-- many microservices,
-- custom speech models,
-- ten AI providers,
-- every EHR,
-- dozens of languages,
-- predictive models,
-- advanced population-health analytics,
-- insurance workflows,
-- automated diagnosis.
+- [ ] ordinary conversation works,
+- [ ] silence handling,
+- [ ] interruption handling,
+- [ ] misunderstanding handling,
+- [ ] AI/provider failure behavior,
+- [ ] structured result persistence.
 
-They need one workflow to work reliably.
+## Safety/escalation
 
-This is the fastest path to revenue.
+- [ ] approved safety scenarios pass,
+- [ ] escalations persist,
+- [ ] escalations reach staff queue,
+- [ ] assign/acknowledge/resolve works,
+- [ ] unresolved work cannot silently disappear,
+- [ ] unavailable-human behavior is defined.
 
----
+## Operations
 
-# 22. The engineering sequence optimized for revenue
+- [ ] tests pass,
+- [ ] CI protects changes,
+- [ ] staging exists,
+- [ ] release is repeatable,
+- [ ] monitoring is live,
+- [ ] alerts are routed,
+- [ ] backups are automated,
+- [ ] restore test passed,
+- [ ] rollback works,
+- [ ] emergency call stop works.
 
-This order differs slightly from a purely technical roadmap because it deliberately produces commercial artifacts early.
+## External review
 
-## Revenue Milestone 0: truth and positioning
+- [ ] applicable client security requirements are satisfied,
+- [ ] applicable privacy/legal requirements are satisfied,
+- [ ] telephony/recording requirements are reviewed,
+- [ ] clinical/safety boundaries are approved where needed,
+- [ ] vendor/provider requirements are satisfied.
 
-Deliver:
+## Client acceptance
 
-- canonical product statement,
-- one use case,
-- product screenshots/demo path,
-- synthetic demo data,
-- design-partner offer,
-- pilot proposal template.
-
-Engineering goal:
-
-- make existing prototype behavior deliberately demonstrable,
-- remove misleading hardcoded state,
-- create reliable demo reset.
-
-Commercial outcome:
-
-- begin design-partner outreach.
-
-## Revenue Milestone 1: polished controlled demo
-
-Deliver:
-
-- Today,
-- Patient 360,
-- Call Detail,
-- Escalation queue,
-- one care-program story,
-- normal / urgent / no-answer / opt-out demo scenarios.
-
-Commercial outcome:
-
-- run repeatable buyer demonstrations without developer improvisation.
-
-## Revenue Milestone 2: production foundations
-
-Deliver:
-
-- organizations,
-- users,
-- permissions,
-- canonical patient,
-- consent/callability,
-- canonical schedule/call model,
-- audit foundation,
-- migrations.
-
-Commercial outcome:
-
-- pass deeper technical buyer conversations and prepare controlled live use.
-
-## Revenue Milestone 3: real call
-
-Deliver:
-
-- production telephony adapter,
-- verified/deduplicated webhooks,
-- live voice runtime,
-- structured results,
-- call lifecycle.
-
-Commercial outcome:
-
-- demonstrate the actual end-to-end capability using approved test numbers.
-
-## Revenue Milestone 4: safe human handoff
-
-Deliver:
-
-- safety policy,
-- human request,
-- urgent/concerning scenario handling,
-- durable escalation,
-- assignment/acknowledgment/resolution.
-
-Commercial outcome:
-
-- unlock serious care-operations pilot conversations.
-
-## Revenue Milestone 5: pilot operations
-
-Deliver:
-
-- client onboarding,
-- patient import,
-- program enrollment,
-- call windows,
-- retries,
-- reporting,
-- monitoring,
-- tests,
-- CI/CD,
-- backups/recovery,
-- support/runbooks.
-
-Commercial outcome:
-
-- launch a controlled paid pilot after required approvals.
-
-## Revenue Milestone 6: recurring subscription
-
-Deliver:
-
-- stable production operations,
-- self-service routine admin,
-- reliable reporting,
-- support process,
-- billing/subscription operations outside or inside product as appropriate,
-- renewal/expansion workflow.
-
-Commercial outcome:
-
-- convert successful pilot into recurring revenue.
+- [ ] UAT completed,
+- [ ] acceptance matrix completed,
+- [ ] critical defects resolved,
+- [ ] agreed sign-off/approval recorded.
 
 ---
 
-# 23. A practical 30-day commercial and engineering push
+# 25. What to do when 9 out of 10 features are complete
 
-This is an aggressive working plan, not a guarantee.
+Do not launch the product as complete solely because 90% sounds high.
 
-Parallel work is assumed where possible.
+Process:
 
-## Days 1-3: make the product easy to sell
+1. Identify the remaining feature.
+2. Determine whether it is truly part of agreed scope.
+3. If yes, keep the delivery open.
+4. Finish implementation.
+5. Run feature-level tests.
+6. Run regression tests across the full workflow.
+7. Update acceptance matrix.
+8. Re-run relevant client UAT.
+9. Only then close delivery.
 
-Product/business:
+If the client voluntarily decides the feature is no longer needed, change the written scope formally.
 
-- freeze first use case,
-- define buyer,
-- create design-partner offer,
-- create one-page overview,
-- create pilot proposal template,
-- define demo narrative.
-
-Engineering:
-
-- finish architecture decisions,
-- separate demo data from production data,
-- build reliable demo reset,
-- remove obviously misleading sample behavior,
-- make existing flows stable enough for repeated demos.
-
-Sales:
-
-- start outreach to likely design partners immediately.
-
-Do not wait for production completion before customer discovery.
-
-## Days 4-7: create the polished demo surface
-
-Build/connect:
-
-- Today queue,
-- Patient list/Profile,
-- Call Detail,
-- Escalation queue,
-- one care-program representation,
-- scripted synthetic scenarios.
-
-Sales:
-
-- run discovery calls,
-- show controlled demo,
-- collect objections,
-- record required procurement/security questions.
-
-## Week 2: production foundation
-
-Build:
-
-- organizations,
-- users,
-- roles,
-- server-side authorization,
-- canonical patient,
-- consent/callability,
-- canonical call/schedule entities,
-- migration cleanup,
-- core audit events.
-
-Commercial:
-
-- aim to sign a design partner or pilot letter/contract subject to launch gates,
-- refine proposal based on real objections.
-
-## Week 3: real voice slice
-
-Build:
-
-- one telephony adapter,
-- real outbound test calls,
-- verified webhooks,
-- real voice runtime,
-- safe conversation flow,
-- structured response persistence.
-
-Test:
-
-- normal completion,
-- no answer,
-- opt-out,
-- interruption,
-- AI/provider failure.
-
-Commercial:
-
-- demonstrate real test-number calls to interested design partners.
-
-## Week 4: safety, pilot operations, release foundation
-
-Build:
-
-- deterministic safety rules,
-- durable escalation,
-- care-team resolution,
-- retry policy,
-- patient import,
-- onboarding,
-- core reports,
-- CI,
-- staging,
-- monitoring,
-- backups,
-- recovery/runbooks.
-
-External:
-
-- complete required security/privacy/telephony/clinical/legal review for the intended live pilot.
-
-Commercial:
-
-- move first qualified design partner toward controlled live-pilot approval.
-
-A real PHI pilot may require more than 30 days because external approvals and vendor/client review are not controlled only by engineering speed.
+Do not silently delete it from the definition of done.
 
 ---
 
-# 24. If revenue is the priority, do sales and engineering in parallel
+# 26. Founder dashboard
 
-A common failure mode is:
+Track two kinds of progress separately.
 
-```text
-Build for six months
-        |
-        v
-finally show someone
-        |
-        v
-learn that buyer wanted a different workflow
-```
+## Commercial pipeline
 
-Avoid this.
-
-Instead:
-
-```text
-Build narrow demo
-        |
-        +--> customer discovery
-        |
-        +--> sales objections
-        |
-        +--> engineering
-        |
-        +--> security/procurement learning
-        |
-        +--> pilot design
-        |
-        v
-repeat
-```
-
-Do not let sales requests override safety/architecture gates, but do let real buyer evidence reorder optional product work.
-
----
-
-# 25. The founder dashboard
-
-Track commercial progress just as seriously as code progress.
-
-Every week track:
-
-## Pipeline
-
-- target organizations identified,
-- contacts reached,
+- target organizations,
+- contacts,
 - replies,
 - discovery calls,
 - demos,
 - proposals,
-- design partners signed,
-- pilots approved,
-- production subscriptions.
+- complete-scope agreements,
+- UAT scheduled,
+- activated clients,
+- subscriptions,
+- renewals,
+- expansions.
 
-## Product objections
+## Delivery completeness
 
-For each lost or delayed deal, record the reason:
+For each potential/contracted client package:
 
-- missing integration,
-- missing security requirement,
-- no budget,
-- wrong use case,
-- procurement delay,
-- unclear ROI,
-- no executive sponsor,
-- product reliability concern,
-- workflow mismatch.
+- total included acceptance rows,
+- rows passed,
+- rows blocked,
+- critical defects,
+- external approvals pending,
+- UAT status,
+- activation status.
 
-## Product usage
+Do not report "90% delivered" as though it means "ready to invoice."
 
-Once pilots begin:
+Report:
 
-- enrolled patients,
-- calls attempted,
-- completion,
-- escalations,
-- operator usage,
-- client support requests,
-- expansion requests.
+> 9/10 acceptance items pass. One contracted item remains. Delivery is not yet accepted.
 
-This keeps engineering tied to revenue evidence.
+That keeps incentives clean.
 
 ---
 
-# 26. The biggest commercial traps
+# 27. Biggest commercial traps under this model
 
-## Trap 1: claiming readiness too early
+## Trap 1: agreeing to too many features
 
-One security incident can destroy an early healthcare startup.
+Because we insist on complete delivery, bad scope discipline can destroy speed.
 
-## Trap 2: building a platform before a workflow
+Fix scope before promising it.
 
-Clients buy outcomes before they buy architecture.
+## Trap 2: treating a mock as delivery
 
-## Trap 3: accepting every custom request
+A simulated provider is useful for development. It is not a real-call feature.
 
-This becomes consulting with a codebase rather than a scalable product.
+## Trap 3: infinite client changes
 
-## Trap 4: underpricing implementation work
+Complete delivery does not mean accepting unlimited mid-project additions.
 
-Early clients often require significant configuration/support.
+Use the change-request policy.
 
-Do not pretend that labor is free.
+## Trap 4: hidden manual work
 
-## Trap 5: ignoring support cost
+If the founder manually fixes normal client workflows, the feature is not fully productized.
 
-If every failed call needs the founder to inspect logs, the apparent recurring revenue is not truly scalable.
+## Trap 5: false completion from UI
 
-## Trap 6: selling AI instead of operations
+A pretty screen connected to hardcoded arrays is not a finished operational feature.
 
-AI is the mechanism. The product value is completed follow-up and safe human attention.
+## Trap 6: production without operations
 
-## Trap 7: using real patient data to make the demo look impressive
+If backups, monitoring, rollback, and support do not exist, the product is not complete for a real client dependency.
 
-Use synthetic data until the environment and agreements are ready.
+## Trap 7: compliance theater
 
-## Trap 8: building an EHR integration before a signed need
+Documentation does not replace applicable legal/security/privacy/clinical review.
 
-Integrations can consume weeks and still not produce revenue.
+## Trap 8: waiting to talk to buyers
 
-## Trap 9: measuring vanity metrics
-
-"Calls initiated" is not enough. Measure reach, completion, escalations, failure, and staff value.
-
-## Trap 10: confusing a signed pilot with product-market fit
-
-One client proves willingness from one client.
-
-Repeatability across multiple similar clients is stronger evidence.
+You can validate the product before charging. Avoid building the wrong complete product.
 
 ---
 
-# 27. What must become self-service before the business scales
+# 28. Kill switch requirement
 
-The first client can receive some founder-assisted setup.
+Before real client activation, authorized users/operators need a safe way to pause automation.
 
-By clients two through five, routine operations must move into the product.
+At minimum consider:
 
-Prioritize self-service for:
+- pause patient,
+- pause care program,
+- pause organization,
+- pause all outbound calls.
+
+Actions must be:
+
+- permission protected,
+- auditable,
+- visible,
+- reversible where appropriate.
+
+If outbound behavior becomes unsafe, we should not need to deploy code to stop it.
+
+---
+
+# 29. Failure messages for ordinary users
+
+A care coordinator should not receive raw engineering errors as the primary explanation.
+
+Bad:
+
+```text
+ECONNRESET webhook 500
+```
+
+Better:
+
+```text
+The calling service was temporarily unavailable. This call was not marked complete. The next retry will follow the configured retry policy.
+```
+
+Technical details can remain available to operations/support users.
+
+User-facing failure handling is part of completion.
+
+---
+
+# 30. Definition of usable
+
+A complete V1 is usable when a client can perform ordinary work without engineering intervention.
+
+The client can:
+
+1. sign in,
+2. access only its organization,
+3. manage routine staff access,
+4. import patients,
+5. understand patient callability,
+6. enroll the patient in the approved program,
+7. see upcoming check-ins,
+8. allow scheduling to run automatically,
+9. receive real voice calls,
+10. see outcomes,
+11. see and resolve escalations,
+12. respect opt-outs,
+13. view reports,
+14. review audit information required for their workflow,
+15. understand failures,
+16. contact support,
+17. pause automation through approved controls.
+
+---
+
+# 31. Definition of sellable
+
+Under this founder policy, a product is sellable when:
+
+- the buyer understands the exact scope,
+- the scope solves a real problem,
+- every included feature is complete,
+- acceptance criteria pass,
+- launch gates pass,
+- support/operations are defined,
+- the product can be activated without pretending unfinished work is complete.
+
+A product is not sellable merely because a demo is impressive.
+
+---
+
+# 32. Definition of renewable
+
+A client will continue paying when:
+
+- the complete workflow is used repeatedly,
+- staff trust the product,
+- failures are visible/manageable,
+- the system saves measurable effort or improves operations,
+- support is dependable,
+- reporting justifies the spend,
+- replacing the system with the old manual workflow would be painful.
+
+---
+
+# 33. Definition of scalable revenue
+
+Revenue is not scalable if each client requires the founder to:
+
+- create database rows manually,
+- change source code for ordinary configuration,
+- deploy a private fork,
+- inspect every call,
+- manually retry normal failures,
+- build every client a unique product,
+- explain every error personally.
+
+The first client may receive hands-on onboarding, but normal operation must increasingly become productized.
+
+---
+
+# 34. Self-service priorities
+
+Before clients two through five, prioritize:
 
 - organization setup,
-- staff invitation/deactivation,
+- staff invitations/deactivation,
 - patient import,
 - patient correction,
 - care-program enrollment,
-- call pause/resume,
-- escalation routing settings,
-- retry/call-window settings,
+- schedule pause/resume,
+- call-window settings,
+- escalation routing,
 - reports,
 - audit search.
 
-Do not make clients edit environment variables or ask the developer to run SQL for normal operations.
+Complete delivery is easier to repeat when normal configuration is self-service.
 
 ---
 
-# 28. When to add integrations
+# 35. Integration sequence
 
-Add integrations after the core workflow works and a client contract justifies them.
+Do not let integrations prevent first complete delivery unless the first client truly requires them.
 
-Recommended sequence:
+Preferred order:
 
 ## First
 
 CSV import/export.
 
-Why:
+## Then
 
-- simple,
-- understandable,
-- fast to implement,
-- works across many clients.
+Stable external API/webhooks.
 
 ## Then
 
-Stable client API and webhooks.
+FHIR where useful.
 
-Why:
-
-- lets technical clients automate data exchange,
-- creates a reusable integration boundary.
+FHIR is a healthcare data exchange standard that defines common resource structures and APIs for exchanging healthcare information.
 
 ## Then
 
-FHIR where appropriate.
+Specific EHR integrations justified by committed customers.
 
-FHIR is a healthcare data exchange standard. It defines common ways healthcare systems represent and exchange information.
-
-## Then
-
-Specific EHR integrations demanded by paying customers.
-
-Do not reverse this order without a signed commercial reason.
+If a specific EHR integration is in the signed first-client scope, however, the complete-delivery rule applies and it must be finished before acceptance.
 
 ---
 
-# 29. When to add more care programs
+# 36. Additional care programs
 
-Do not create ten programs before one works.
+Do not create ten half-complete programs.
 
-Start with one.
+Finish one program.
 
-After it is stable, create reusable building blocks such as:
+Then create reusable building blocks:
 
-- yes/no question,
+- yes/no,
 - numeric scale,
 - free response,
 - confirmation,
-- retry/clarification,
+- clarification/retry,
 - escalation rule,
 - callback request,
 - closing instructions.
 
-Then future programs become controlled configurations instead of separate code branches.
-
-Good later candidates may include:
-
-- post-discharge follow-up,
-- medication adherence check-in,
-- appointment readiness/reminder,
-- chronic-care routine check-in,
-- procedure follow-up.
-
-Each new program needs appropriate clinical/product review for its intended use.
+Future programs can then be complete configurations instead of separate ad hoc implementations.
 
 ---
 
-# 30. How the current web intake fits into the commercial product
+# 37. Current web intake
 
-Do not throw away the existing intake flow.
+Do not throw away the existing intake product.
 
-It can become another patient interaction channel.
-
-Longer-term:
+Longer term:
 
 ```text
 Care Program
-     |
-     +--> Voice
-     |
-     +--> Web intake / follow-up
-     |
-     +--> SMS later if justified
+    |
+    +--> Voice
+    +--> Web intake / follow-up
+    +--> SMS later if justified
 ```
 
-The first commercial voice milestone should not require redesigning the entire existing intake experience.
-
-Preserve it and connect shared patient/organization concepts deliberately later.
+For the first voice product, preserve the existing intake flow and integrate shared patient/organization concepts deliberately rather than redesigning everything at once.
 
 ---
 
-# 31. Client support model for the first paid pilots
+# 38. Support model
 
-Define support before launch.
+Before activation, define:
 
-Clients need to know:
+- support contact,
+- severity levels,
+- support hours,
+- incident handling,
+- emergency stop process,
+- client communication process.
 
-- how to report a problem,
-- what counts as urgent,
-- when support is available,
-- what happens if calling must stop,
-- who investigates incidents,
-- how they learn about resolution.
+Runbooks should cover at minimum:
 
-For the earliest pilots, a simple documented support channel is acceptable.
-
-The system still needs operational controls so support does not depend on manually editing data.
-
-Create runbooks for at least:
-
-- telephony provider down,
-- AI provider down,
+- telephony outage,
+- AI outage,
 - scheduler stuck,
 - duplicate call risk,
 - escalation routing failure,
-- database unavailable,
+- database outage,
 - suspected data exposure,
 - incorrect client configuration,
-- emergency stop of outbound automation.
+- emergency outbound pause.
+
+Support readiness is part of complete delivery.
 
 ---
 
-# 32. The security and trust package affects sales velocity
+# 39. Trust package
 
-Healthcare buyers often need evidence before they can approve a pilot.
-
-Prepare a client trust folder containing, as applicable:
+Prepare client-facing material such as:
 
 - architecture overview,
 - data-flow diagram,
 - authentication/authorization overview,
 - encryption approach,
 - audit approach,
-- data retention approach,
+- retention approach,
 - backup/recovery approach,
-- incident response plan,
+- incident response,
 - subprocessor/vendor list,
-- secure development process,
-- vulnerability management approach,
-- support process,
-- privacy/security contacts,
-- applicable contract templates or review process.
+- secure-development process,
+- vulnerability-management approach,
+- support model,
+- privacy/security contacts.
 
-Do not wait until procurement asks for these after the engineering work is done.
+Some materials require qualified legal/privacy/security/clinical review.
 
-Some items require qualified legal, privacy, security, or clinical review.
-
-Engineering documentation does not replace those reviews.
+Do not substitute engineering documentation for required professional review.
 
 ---
 
-# 33. The product must have a kill switch
+# 40. Stop conditions after launch
 
-Before a live pilot, authorized staff or operators need a safe way to stop outbound automation.
+Complete delivery does not mean ignoring incidents because the client is now paying.
 
-Possible controls:
-
-- pause one patient,
-- pause one care program,
-- pause one organization,
-- pause all outbound calls.
-
-The action should be:
-
-- permission-protected,
-- auditable,
-- visible,
-- reversible when appropriate.
-
-If a provider starts behaving incorrectly, the team should not need to deploy code to stop calls.
-
-This is both an engineering and client-trust feature.
-
----
-
-# 34. The product must explain failures to ordinary users
-
-Do not show a care coordinator:
-
-```text
-Webhook 500 / ECONNRESET
-```
-
-Show:
-
-```text
-Call could not be completed because the calling service was temporarily unavailable.
-No additional retry will occur until the configured retry window.
-```
-
-Keep technical details available to authorized operations users.
-
-Ordinary users need actionable language.
-
----
-
-# 35. Definition of "usable"
-
-For this project, usable does not mean the application opens.
-
-It means a client can perform normal work without engineering help.
-
-A usable V1 allows a client to:
-
-1. sign in,
-2. access only their organization,
-3. add/import patients,
-4. understand who can be called,
-5. enroll a patient in the approved program,
-6. see upcoming check-ins,
-7. let the scheduler initiate approved calls automatically,
-8. see call outcomes,
-9. see and resolve escalations,
-10. respect opt-outs,
-11. view reports,
-12. manage routine staff access,
-13. receive understandable failure messages,
-14. contact support when needed.
-
-If a developer must manually perform one of these normal steps, that step is not yet productized.
-
----
-
-# 36. Definition of "sellable"
-
-A product is sellable when a buyer can understand:
-
-- what problem it solves,
-- what they receive,
-- what it costs,
-- what it does not do,
-- how they start,
-- how success is measured,
-- how risks are controlled,
-- how support works.
-
-A polished repository alone does not make a product sellable.
-
-The product needs packaging and an implementation path.
-
----
-
-# 37. Definition of "renewable"
-
-A client will renew when:
-
-- the workflow is used repeatedly,
-- staff trust the results,
-- failures are manageable,
-- the system saves measurable effort or improves operations,
-- support is dependable,
-- reporting helps justify the spend,
-- switching back to the previous manual workflow would feel worse.
-
-Build toward renewability, not only initial sale.
-
----
-
-# 38. Definition of "scalable revenue"
-
-Revenue is not scalable if every additional client requires the founder to:
-
-- create database rows manually,
-- change code,
-- deploy a private fork,
-- inspect every call,
-- manually retry jobs,
-- configure secrets by trial and error,
-- build a unique integration,
-- explain every failure personally.
-
-Scalable revenue requires more client volume without proportional founder work.
-
-That is why organization setup, users, import, configuration, monitoring, and support tools matter commercially.
-
----
-
-# 39. Stop conditions
-
-A devil's-advocate launch plan needs explicit reasons to pause.
-
-Pause a live pilot if any of the following occurs and the impact is not understood/contained:
+Pause relevant automation if an uncontrolled condition includes:
 
 - possible cross-client data exposure,
-- unexpected repeated/duplicate outbound calls,
-- opt-out not respected,
-- high-priority escalation not created/routed as expected,
-- AI gives disallowed medical guidance,
-- call-state corruption causes unsafe retry behavior,
-- provider webhook verification fails unexpectedly,
-- backup/restore capability is unavailable during a significant incident,
-- monitoring shows the team cannot reliably understand what is happening.
+- repeated duplicate calls,
+- opt-out failure,
+- high-priority escalation failure,
+- disallowed medical guidance,
+- corrupt call-state retries,
+- webhook authenticity failure,
+- inability to understand system state during a major incident.
 
-A pause is not failure.
-
-Continuing risky automation because a client is paying is failure.
+Continuing unsafe automation to protect revenue is unacceptable.
 
 ---
 
-# 40. Decision log that must be completed before the live pilot
+# 41. Decision log
 
-These decisions cannot be silently invented by coding agents.
+These decisions must be explicitly resolved.
 
 ## Needs Architect Decision
 
@@ -1776,54 +1963,50 @@ These decisions cannot be silently invented by coding agents.
 - canonical patient model,
 - canonical call/session/attempt model,
 - canonical audit model,
+- migration reconciliation,
 - production deployment architecture,
 - first telephony provider,
-- voice runtime integration pattern.
+- voice runtime pattern.
 
 ## Needs Product/Founder Decision
 
-- exact first use case,
+- exact first product package,
+- exact V1 features,
 - target buyer,
-- pilot scope,
-- pricing/package hypothesis,
-- support hours,
 - initial geography,
-- whether recording is a product requirement.
+- pricing model,
+- billing start condition,
+- support hours,
+- recording requirement,
+- expansion-package strategy.
 
 ## Needs Clinical/Product Safety Decision
 
-- approved question set,
-- disallowed behavior,
-- safety trigger categories,
-- human escalation expectations,
+- approved questions,
+- prohibited behavior,
+- safety categories,
+- escalation expectations,
 - unavailable-human behavior,
-- language shown/spoken to patients.
+- patient-facing language.
 
 ## Needs Security/Privacy Decision
 
-- identity/MFA requirements,
-- transcript access rules,
+- MFA requirement,
+- transcript access,
 - retention,
 - recording policy,
 - export policy,
-- support-access model.
+- support access.
 
 ## Needs Legal/Compliance Review
 
-- applicable privacy/security obligations,
+- privacy/security obligations,
 - client agreements,
-- telephony/consent/disclosure rules,
-- recording rules where applicable,
-- vendor/subprocessor contractual requirements,
-- marketing claims.
-
----
-
-# 41. The one-line build strategy
-
-If the team forgets everything else in this file, remember this:
-
-> Sell a narrow paid design partnership now, build one end-to-end post-visit follow-up workflow to production quality, launch it with one controlled client, prove operational value, convert it to recurring revenue, and only then expand the platform.
+- consent/disclosure rules,
+- call recording rules,
+- vendor/subprocessor requirements,
+- marketing claims,
+- final commercial contract structure.
 
 ---
 
@@ -1831,118 +2014,99 @@ If the team forgets everything else in this file, remember this:
 
 In order:
 
-1. Freeze the first commercial workflow.
-2. Finalize `docs/repo_context.md` as engineering truth.
+1. Freeze the standard V1 commercial feature set.
+2. Create the master V1 acceptance matrix.
 3. Freeze canonical organization/patient/call/audit contracts.
-4. Separate intentional demo fixtures from production data paths.
-5. Build the sellable care-team demo: Today, Patient 360, Call Detail, Escalations.
-6. Create one versioned care program.
-7. Implement organizations, users, permissions, and tenant isolation.
-8. Implement canonical patient/consent/callability.
-9. Reconcile schedules/call sessions/call attempts and migrations.
-10. Integrate one real telephony provider.
-11. Implement the real voice runtime.
-12. Implement safety and durable human escalation.
-13. Connect all care-team screens to authenticated live APIs.
-14. Add client onboarding and CSV import.
-15. Add reporting and audit search.
-16. Add comprehensive automated tests and AI evaluations.
-17. Add CI/CD and staging.
-18. Add monitoring, alerts, backup/restore, rollback, and kill switches.
-19. Complete applicable external client/security/privacy/legal/clinical review.
-20. Run the client-readiness checklist.
-21. Launch one small controlled paid pilot.
-22. Measure outcomes.
-23. Fix repeated operational pain.
-24. Convert the pilot to subscription.
-25. Repeat with a second similar client before broad product expansion.
+4. Reconcile migrations.
+5. Implement organizations and tenant isolation.
+6. Implement individual users, roles, and centralized authorization.
+7. Implement canonical patient, consent, opt-out, and callability.
+8. Implement one versioned care program.
+9. Implement canonical schedule/call session/call attempt domain.
+10. Harden scheduler idempotency and retries.
+11. Integrate one real telephony provider.
+12. Implement official webhook verification/deduplication/state ordering.
+13. Implement real telephone voice runtime.
+14. Implement structured response extraction and validation.
+15. Implement deterministic safety rules plus approved AI boundary.
+16. Implement durable escalation lifecycle.
+17. Build Today queue on live APIs.
+18. Build Patient list and Patient 360 on live APIs.
+19. Build Call Detail on live data.
+20. Build Escalation queue/actions on live data.
+21. Implement CSV patient import with validation.
+22. Implement required client/admin settings.
+23. Implement reports.
+24. Implement audit search/history.
+25. Expand unit/integration/API/permission/webhook/voice tests.
+26. Add browser E2E tests.
+27. Add AI evaluation suite.
+28. Add CI/CD.
+29. Add staging.
+30. Add monitoring and alerts.
+31. Add backups and prove restore.
+32. Add rollback and emergency stop controls.
+33. Complete applicable external reviews.
+34. Run the entire client-readiness checklist.
+35. Run client UAT against every included acceptance row.
+36. Fix every blocking defect.
+37. Obtain acceptance.
+38. Activate the client.
+39. Begin recurring billing according to the final agreement.
+40. Measure operational value and renewal signals.
 
 ---
 
-# 43. What "done" looks like commercially
+# 43. The one-line strategy
 
-The first commercial V1 is done when all of this is true:
+If the team remembers only one sentence, use this:
 
-```text
-A new client can be onboarded
-        |
-        v
-Their users can sign in
-        |
-        v
-Their patients are isolated from all other clients
-        |
-        v
-Patients can be imported without engineering
-        |
-        v
-One approved program can be assigned
-        |
-        v
-Calls happen automatically
-        |
-        v
-Real voice interaction works
-        |
-        v
-Routine results are saved
-        |
-        v
-Unsafe/uncertain cases become human work
-        |
-        v
-Staff resolve follow-up inside the product
-        |
-        v
-Opt-outs and failures are handled
-        |
-        v
-Managers can see useful reporting
-        |
-        v
-The engineering team can monitor/recover the system
-        |
-        v
-The client sees enough repeated value to keep paying
-```
-
-That is the usable, sellable, renewable product target.
+> Keep the first scope small, but once we promise it, finish every promised part, prove it works end to end, get acceptance, and only then treat it as commercially delivered.
 
 ---
 
 # 44. Final devil's-advocate verdict
 
-## Can the current repository be sold today as finished production healthcare software?
+## Can the current repository be sold today as a finished production healthcare product?
 
 No.
 
-## Can the project start generating commercial conversations immediately?
+## Should we charge a client for an 8-of-10 feature delivery if the agreement says they are buying all 10?
+
+No.
+
+Finish all 10 or formally change the scope before calling the delivery complete.
+
+## Does this mean we should build everything every prospect asks for?
+
+No.
+
+Challenge and narrow the scope before committing.
+
+## Can we talk to buyers immediately?
 
 Yes.
 
-## Can a client pay immediately for a transparent design-partner / implementation engagement?
+Use discovery, demos, security conversations, and proposals to validate the product while engineering finishes the standard V1.
 
-Yes, if the commercial agreement accurately describes what exists, what is being delivered, and when real patient-data/live-operation gates apply.
+## What is the fastest route to regular revenue under this rule?
 
-## Should real PHI be used just to speed up a demo?
+1. Define the smallest valuable complete product.
+2. Freeze its exact feature set and exclusions.
+3. Freeze architecture contracts.
+4. Parallelize independent implementation.
+5. Complete every feature in the package.
+6. Pass automated/security/operational/client acceptance tests.
+7. Complete applicable external review.
+8. Activate the client only when the full agreed scope is ready.
+9. Begin recurring billing for the complete product.
+10. Reuse the same complete product for the next similar client.
+11. Add future expansions as separately defined complete packages.
 
-No.
+The commercial advantage of this approach is trust and repeatability.
 
-## Should the team wait until every production feature is complete before talking to buyers?
+The cost is that scope discipline becomes extremely important.
 
-No.
+If we promise too much, we delay revenue.
 
-## What is the fastest responsible route to regular income?
-
-1. Sell a narrow paid design-partner engagement.
-2. Use synthetic/test data first.
-3. Build one complete production workflow rather than many partial features.
-4. Launch one small controlled paid pilot after the required gates pass.
-5. Measure operational value.
-6. Convert the pilot to a recurring subscription.
-7. Make client two easier to onboard than client one.
-8. Expand only when repeated buyer evidence justifies it.
-
-The project's success should not be measured by the number of files, models, services, prompts, or AI features built.
-
-It should be measured by whether a real care team can depend on one workflow, whether patients are handled safely, whether the product can be operated without constant developer intervention, and whether clients continue paying because the workflow is genuinely useful.
+Therefore the fastest path is not partial delivery. It is **a deliberately small but fully complete first product**.
