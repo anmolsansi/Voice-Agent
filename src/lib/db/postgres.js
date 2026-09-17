@@ -1,5 +1,7 @@
 const { Pool } = require('pg');
 const { getConfig } = require('../../config/env');
+const { AsyncLocalStorage } = require('node:async_hooks');
+const transactionContext = new AsyncLocalStorage();
 
 let pool = null;
 let warnedUnavailable = false;
@@ -24,7 +26,7 @@ function getPoolConfig() {
 
 function isMemoryFallbackAllowed() {
   const config = getConfig();
-  return config.nodeEnv === 'development' || config.allowMemoryFallback;
+  return config.nodeEnv !== 'production' && !config.databaseUrl && (config.nodeEnv === 'development' || config.allowMemoryFallback);
 }
 
 function createPersistenceError(message, reason) {
@@ -105,6 +107,8 @@ async function getPersistenceStatus() {
 }
 
 async function query(text, params) {
+  const transactionClient = transactionContext.getStore();
+  if (transactionClient) return transactionClient.query(text, params);
   const activePool = getPool();
   if (!activePool) {
     throw createPersistenceError(
@@ -124,6 +128,24 @@ async function query(text, params) {
   }
 }
 
+async function transaction(work) {
+  if (transactionContext.getStore()) return work();
+  const activePool = getPool();
+  if (!activePool) throw createPersistenceError('Database is required.', 'DATABASE_URL_MISSING');
+  let client;
+  try {
+    client = await activePool.connect();
+    await client.query('begin');
+    const result = await transactionContext.run(client, work);
+    await client.query('commit');
+    return result;
+  } catch (error) {
+    if (client) await client.query('rollback').catch(() => {});
+    if (error.status || ['23505', '23503', '23514', '22P02'].includes(error.code)) throw error;
+    throw createPersistenceError('Database operation failed.', error.code);
+  } finally { client?.release(); }
+}
+
 async function closePool() {
   if (!pool) {
     return;
@@ -139,6 +161,7 @@ function getLastPoolErrorCode() {
 }
 
 module.exports = {
+  transaction,
   closePool,
   createPersistenceError,
   getLastPoolErrorCode,

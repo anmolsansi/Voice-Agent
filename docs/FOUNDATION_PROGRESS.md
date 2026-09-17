@@ -11,21 +11,21 @@ The parent checklist is the source of implementation status; unchecked means not
 - [x] 03 Runtime route/caller inventory
 - [x] 04 Fresh migration order
 - [x] 05 Repository context corrected
-- [ ] 06 Staff user schema
-- [ ] 07 Hashed session schema
-- [ ] 08 Bounded scrypt password handling
-- [ ] 09 Admin bootstrap
-- [ ] 10 Account persistence validation
-- [ ] 11 Login
-- [ ] 12 Session lookup and expiry
-- [ ] 13 Logout/revocation
-- [ ] 14 Persistent throttling
-- [ ] 15 Session failure tests
-- [ ] 16 Admin user management
-- [ ] 17 Disable and revoke
-- [ ] 18 Reset and password change
-- [ ] 19 Last-admin concurrency invariant
-- [ ] 20 Management/recovery tests
+- [x] 06 Staff user schema
+- [x] 07 Hashed session schema
+- [x] 08 Bounded scrypt password handling
+- [x] 09 Admin bootstrap
+- [x] 10 Account persistence validation
+- [x] 11 Login
+- [x] 12 Session lookup and expiry
+- [x] 13 Logout/revocation
+- [x] 14 Persistent throttling
+- [x] 15 Session failure tests
+- [x] 16 Admin user management
+- [x] 17 Disable and revoke
+- [x] 18 Reset and password change
+- [x] 19 Last-admin concurrency invariant
+- [x] 20 Management/recovery tests
 - [ ] 21 Email/password UI
 - [ ] 22 Session forwarding and CSRF
 - [ ] 23 Intake/PDF/report protection
@@ -64,3 +64,5 @@ No production deployment, real calls, real patient data, or commercial readiness
 
 Baseline: 22/22 tests passed; lint passed with pre-existing radio aria warning; typecheck/build passed. Both 004 migrations apply in filename order. npm audit reports 14 inherited vulnerabilities (including a critical Next.js advisory); dependency remediation is a release blocker, not silently included in this foundation change.
 Tracking: https://github.com/anmolsansi/Voice-Agent/issues/33
+
+Identity checkpoint: password hashing unit test and five PostgreSQL integration scenarios pass (bootstrap, permissions, expiry/logout, concurrent last-admin protection, recovery, persistent throttling). CLI is validated further in final acceptance.
