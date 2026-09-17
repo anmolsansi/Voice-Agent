@@ -1,3 +1,7 @@
+# Foundation implementation baseline — 2026-09-17
+
+Verified at `ceb8fc0`: shared-token authentication is the only implemented staff login. JWT configuration/docs do not establish a JWT implementation. Both 004 migrations apply successfully on PostgreSQL 16; preserve their filenames. Call endpoints are unprotected and call-detail persistence is independent of attempts. Foundation work supersedes the target architecture below; see `FOUNDATION_PROGRESS.md`.
+
 # CheckIn Care Repository Context
 
 ## Purpose of this file
