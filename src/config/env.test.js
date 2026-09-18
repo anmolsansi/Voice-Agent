@@ -59,7 +59,7 @@ test('getConfig returns typed local defaults without exposing secret values thro
   await withCleanEnv(() => {
     process.env.NODE_ENV = 'development';
     process.env.DATABASE_URL = 'postgres://postgres:postgres@localhost:5432/voice_agent_dev';
-    process.env.STAFF_AUTH_MODE = 'legacy';
+    process.env.STAFF_AUTH_MODE = 'session';
     process.env.STAFF_ACCESS_TOKEN = 'local-only-staff-token';
 
     const config = getConfig();
@@ -76,7 +76,7 @@ test('getConfig returns typed local defaults without exposing secret values thro
 test('getConfig fails fast for missing production database URL', async () => {
   await withCleanEnv(() => {
     process.env.NODE_ENV = 'production';
-    process.env.STAFF_AUTH_MODE = 'legacy';
+    process.env.STAFF_AUTH_MODE = 'session';
     process.env.STAFF_ACCESS_TOKEN = 'production-staff-token';
 
     assert.throws(() => getConfig({ strict: true }), /DATABASE_URL is required when NODE_ENV=production/);
@@ -92,7 +92,16 @@ test('getConfig requires provider secrets when non-mock integrations are selecte
 
     assert.throws(
       () => getConfig(),
-      /JWT_SECRET is required.*TELEPHONY_AUTH_TOKEN is required.*AI_PROVIDER_API_KEY is required/s,
+      /STAFF_AUTH_MODE must be one of: session.*TELEPHONY_AUTH_TOKEN is required.*AI_PROVIDER_API_KEY is required/s,
     );
+  });
+});
+
+ test('production rejects memory fallback and recording flags', async () => {
+  await withCleanEnv(() => {
+    process.env.NODE_ENV = 'production';
+    process.env.ALLOW_MEMORY_FALLBACK = 'true';
+    process.env.STORE_RECORDING_URLS = 'true';
+    assert.throws(() => getConfig(), /Memory fallback is forbidden.*Recordings are disabled/s);
   });
 });

@@ -6,7 +6,12 @@ const { createApp } = require('../../app');
 const { closePool } = require('../../lib/db/postgres');
 const { intakeSessionStore } = require('./session-store');
 
-const STAFF_ACCESS_TOKEN = 'test-staff-token';
+const STAFF_ACCESS_TOKEN = 'a'.repeat(64);
+// These unit route tests isolate intake behavior; real auth/HTTP behavior is covered in PostgreSQL integration tests.
+test.mock.method(require('../auth/service'), 'authenticate', async (token) => {
+  if (token !== STAFF_ACCESS_TOKEN) throw Object.assign(new Error('Unauthorized'), { status: 401, code: 'UNAUTHORIZED' });
+  return { id: '00000000-0000-0000-0000-000000000001', role: 'care_staff' };
+});
 
 async function resetStore() {
   await intakeSessionStore.clearAll();
@@ -61,7 +66,7 @@ async function saveField(baseUrl, sessionId, fieldKey, value) {
 function getStaffHeaders(headers = {}) {
   return {
     ...headers,
-    'x-staff-access-token': STAFF_ACCESS_TOKEN,
+    Authorization: `Bearer ${STAFF_ACCESS_TOKEN}`,
   };
 }
 
@@ -266,9 +271,9 @@ test('pilot-like mode fails closed for intake persistence when DATABASE_URL is m
 });
 
 test('explicit memory fallback is surfaced in health and allows local persistence without DATABASE_URL', async () => {
-  process.env.NODE_ENV = 'production';
+  process.env.NODE_ENV = 'test';
   process.env.ALLOW_MEMORY_FALLBACK = 'true';
-  const { server, baseUrl } = await startTestServer('production');
+  const { server, baseUrl } = await startTestServer('test');
 
   try {
     const createResponse = await fetch(`${baseUrl}/api/intake/sessions`, {

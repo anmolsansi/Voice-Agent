@@ -13,32 +13,9 @@ const {
   submitIntakeSession,
 } = require('./session-service');
 
-const STAFF_ACCESS_HEADER = 'x-staff-access-token';
-
-function getConfiguredStaffAccessToken() {
-  return (process.env.STAFF_ACCESS_TOKEN || '').trim();
-}
-
-function hasValidStaffAccess(request) {
-  const configuredToken = getConfiguredStaffAccessToken();
-  if (!configuredToken) {
-    return false;
-  }
-
-  const providedToken = request.headers[STAFF_ACCESS_HEADER] || request.headers[STAFF_ACCESS_HEADER.toLowerCase()];
-  return providedToken === configuredToken;
-}
-
 function requireStaffAccess(request, response) {
-  if (hasValidStaffAccess(request)) {
-    return true;
-  }
-
-  json(response, 401, {
-    error: 'Unauthorized',
-    message: 'Staff authentication required.',
-  });
-
+  if (request.auth) return true;
+  json(response, 401, { error: 'Unauthorized', message: 'Staff authentication required.' });
   return false;
 }
 
@@ -173,7 +150,7 @@ function createIntakeRoutes() {
 
       const session = await getIntakeSessionByPublicSessionId(context.params.publicSessionId);
 
-      if (session.status !== 'submitted' || !session.submittedAt) {
+      if (!['submitted', 'reviewed'].includes(session.status) || !session.submittedAt) {
         return json(response, 409, {
           error: 'Session not submitted',
           message: 'PDF summary is only available after the intake session has been submitted.',
@@ -212,10 +189,15 @@ function createIntakeRoutes() {
     }
   });
 
-  return router.all();
+  const publicRoutes = new Set([
+    'GET /api/intake/sessions/resume', 'POST /api/intake/sessions',
+    'POST /api/intake/sessions/submit', 'POST /api/intake/fields',
+  ]);
+  return router.all().map((route) => ({ ...route, access: publicRoutes.has(`${route.method} ${route.path}`) ? 'public' : 'staff' }));
 }
 
 function getStatusCode(error) {
+  if (error.status) return error.status;
   if (
     error.code === 'INVALID_SESSION_ID' ||
     error.code === 'INVALID_FIELD_KEY' ||

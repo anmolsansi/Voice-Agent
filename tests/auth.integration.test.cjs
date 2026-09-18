@@ -41,6 +41,7 @@ test('direct backend and legacy token bypasses denied, care role cannot mutate c
   await assert.rejects(auth.authenticate(login.token), { code: 'PASSWORD_CHANGE_REQUIRED' });
   await auth.changePassword(login.token, { currentPassword: password, newPassword: password + '-changed' });
   assert.equal((await fetch(base + '/api/staff/users', { headers: { authorization: `Bearer ${login.token}` } })).status, 403);
+  assert.equal((await fetch(base + '/api/calls', { method: 'POST', headers: { authorization: `Bearer ${login.token}` }, body: '{}' })).status, 403);
   await auth.updateUser(staff.id, { disabled: true }, admin);
   await assert.rejects(auth.authenticate(login.token), { code: 'UNAUTHORIZED' });
 });
@@ -76,4 +77,12 @@ test('login failure throttling is durable and shared across requests', async () 
   await assert.rejects(auth.login({ email: 'missing@example.test', password }, 'different-ip'), { code: 'LOGIN_THROTTLED' });
   const { rows: [limit] } = await query('SELECT attempts FROM login_limits WHERE bucket=$1', [`account:${auth.digest('missing@example.test')}`]);
   assert.equal(limit.attempts, 5);
+});
+
+test('IP throttle blocks different accounts and resets after its window', async () => {
+  const ip = 'ip-limit-test';
+  await query('INSERT INTO login_limits(bucket,attempts) VALUES($1,50)', [`ip:${auth.digest(ip)}`]);
+  await assert.rejects(auth.login({ email: 'ip-new@example.test', password }, ip), { code: 'LOGIN_THROTTLED' });
+  await query("UPDATE login_limits SET window_start=now()-interval '16 minutes' WHERE bucket=$1", [`ip:${auth.digest(ip)}`]);
+  await assert.rejects(auth.login({ email: 'ip-new@example.test', password }, ip), { code: 'INVALID_CREDENTIALS' });
 });

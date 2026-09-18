@@ -1,8 +1,8 @@
 function createRouter() {
   const routes = [];
 
-  function register(method, path, handler) {
-    routes.push({ method, path, handler });
+  function register(method, path, handler, access = 'staff') {
+    routes.push({ method, path, handler, access });
   }
 
   function all() {
@@ -10,12 +10,14 @@ function createRouter() {
   }
 
   return {
-    get(path, handler) {
-      register('GET', path, handler);
+    get(path, handler, access) {
+      register('GET', path, handler, access);
     },
-    post(path, handler) {
-      register('POST', path, handler);
+    post(path, handler, access) {
+      register('POST', path, handler, access);
     },
+    put(path, handler, access) { register('PUT', path, handler, access); },
+    patch(path, handler, access) { register('PATCH', path, handler, access); },
     all,
   };
 }

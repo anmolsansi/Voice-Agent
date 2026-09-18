@@ -5,7 +5,7 @@ let loaded = false;
 
 const NODE_ENVS = new Set(['development', 'test', 'production']);
 const LOG_LEVELS = new Set(['trace', 'debug', 'info', 'warn', 'error', 'silent']);
-const STAFF_AUTH_MODES = new Set(['legacy', 'jwt']);
+const STAFF_AUTH_MODES = new Set(['session']);
 const TELEPHONY_PROVIDERS = new Set(['mock', 'twilio', 'telnyx']);
 const AI_PROVIDERS = new Set(['mock', 'openai']);
 const SPEECH_PROVIDERS = new Set(['web-speech', 'mock', 'openai', 'deepgram', 'elevenlabs']);
@@ -21,9 +21,8 @@ const SPEECH_PROVIDERS = new Set(['web-speech', 'mock', 'openai', 'deepgram', 'e
  * @property {boolean} allowMemoryFallback
  * @property {string} intakeApiBaseUrl
  * @property {'trace'|'debug'|'info'|'warn'|'error'|'silent'} logLevel
- * @property {'legacy'|'jwt'} staffAuthMode
- * @property {string|undefined} jwtSecret
- * @property {string|undefined} staffAccessToken
+ * @property {'session'} staffAuthMode
+ * @property {string|undefined} schedulerToken
  * @property {{provider:'mock'|'twilio'|'telnyx', accountSid?:string, authToken?:string, apiKey?:string, fromNumber?:string, webhookSigningSecret?:string, webhookTunnelUrl?:string}} telephony
  * @property {{provider:'mock'|'openai', apiKey?:string, model:string}} ai
  * @property {{provider:'web-speech'|'mock'|'openai'|'deepgram'|'elevenlabs', voice:string, language:string}} tts
@@ -38,8 +37,8 @@ function loadEnv() {
     return;
   }
 
-  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-  dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
+  dotenv.config({ path: path.resolve(process.cwd(), '.env'), quiet: true });
+  dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true, quiet: true });
   loaded = true;
 }
 
@@ -64,7 +63,7 @@ function getConfig(options = {}) {
     errors,
   );
   const databaseUrl = readOptionalUrl('DATABASE_URL', process.env.DATABASE_URL, errors);
-  const staffAuthMode = readEnum('STAFF_AUTH_MODE', process.env.STAFF_AUTH_MODE || 'legacy', STAFF_AUTH_MODES, errors);
+  const staffAuthMode = readEnum('STAFF_AUTH_MODE', process.env.STAFF_AUTH_MODE || 'session', STAFF_AUTH_MODES, errors);
   const logLevel = readEnum('LOG_LEVEL', process.env.LOG_LEVEL || 'info', LOG_LEVELS, errors);
   const telephonyProvider = readEnum(
     'TELEPHONY_PROVIDER',
@@ -107,6 +106,9 @@ function getConfig(options = {}) {
     errors,
   });
 
+  if (nodeEnv === 'production' && allowMemoryFallback) errors.push('Memory fallback is forbidden in production.');
+  if (storeRecordingUrls || providerRecordingUrlsEnabled) errors.push('Recordings are disabled for the foundation milestone.');
+
   if (errors.length > 0) {
     throw new Error(`Invalid environment configuration:\n- ${errors.join('\n- ')}`);
   }
@@ -122,8 +124,7 @@ function getConfig(options = {}) {
     intakeApiBaseUrl,
     logLevel,
     staffAuthMode,
-    jwtSecret: optionalTrim(process.env.JWT_SECRET),
-    staffAccessToken: optionalTrim(process.env.STAFF_ACCESS_TOKEN),
+    schedulerToken: optionalTrim(process.env.SCHEDULER_TOKEN),
     telephony: {
       provider: telephonyProvider,
       accountSid: optionalTrim(process.env.TELEPHONY_ACCOUNT_SID),
@@ -165,14 +166,6 @@ function validateRequiredSecrets(options) {
 
   if (options.strict && isProduction && !options.databaseUrl) {
     options.errors.push('DATABASE_URL is required when NODE_ENV=production.');
-  }
-
-  if (options.staffAuthMode === 'jwt' && !optionalTrim(process.env.JWT_SECRET)) {
-    options.errors.push('JWT_SECRET is required when STAFF_AUTH_MODE=jwt.');
-  }
-
-  if (options.strict && isProduction && options.staffAuthMode === 'legacy' && !optionalTrim(process.env.STAFF_ACCESS_TOKEN)) {
-    options.errors.push('STAFF_ACCESS_TOKEN is required for legacy staff auth when NODE_ENV=production.');
   }
 
   if (isProduction && options.telephonyProvider !== 'mock') {
