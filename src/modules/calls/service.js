@@ -1,3 +1,6 @@
+const { query, transaction } = require('../../lib/db/postgres');
+const { fail, objectInput, uuid } = require('../../http/errors');
+const { isDeepStrictEqual } = require('node:util');
 const crypto = require('crypto');
 const { callStore } = require('./store');
 
@@ -9,10 +12,13 @@ function createUiError(code, message, details = null) {
   const error = new Error(message);
   error.code = code;
   error.details = details;
+  error.status = code === 'VALIDATION_ERROR' ? 400 : code === 'CALL_NOT_FOUND' ? 404 : code === 'INVALID_STATUS_TRANSITION' ? 409 : 500;
   return error;
 }
 
 function getHttpStatus(error) {
+  if (error.status) return error.status;
+  if (error.code === 'PERSISTENCE_UNAVAILABLE') return 503;
   if (error.code === 'VALIDATION_ERROR') return 400;
   if (error.code === 'CALL_NOT_FOUND') return 404;
   if (error.code === 'INVALID_STATUS_TRANSITION') return 409;
@@ -30,56 +36,43 @@ function serializeError(error, fallbackMessage) {
 }
 
 async function createCallAttempt(payload = {}, options = {}) {
-  validateRequired(payload.patientId, 'patientId');
-  validateRequired(payload.scheduleId, 'scheduleId');
-
-  const now = options.now || new Date().toISOString();
-  const idempotencyKey = normalizeString(payload.idempotencyKey)
-    || normalizeString(options.idempotencyKey)
-    || `call:${payload.scheduleId}:${payload.patientId}:${payload.dueAt || now.slice(0, 10)}`;
-  const existing = await callStore.getCallByIdempotencyKey(idempotencyKey);
-  if (existing) {
-    return { call: serializeCall(existing), created: false };
-  }
-
-  const attemptNumber = payload.attemptNumber || await callStore.getNextAttemptNumber(payload.patientId, payload.scheduleId);
-  const call = {
-    id: payload.id || crypto.randomUUID(),
-    patientId: String(payload.patientId),
-    scheduleId: String(payload.scheduleId),
-    status: payload.status || 'queued',
-    attemptNumber,
-    providerIds: normalizeProviderIds(payload.providerIds),
-    transcriptStatus: payload.transcriptStatus || 'not_started',
-    outcome: payload.outcome || null,
-    escalationFlag: Boolean(payload.escalationFlag),
-    idempotencyKey,
-    createdAt: now,
-    queuedAt: payload.queuedAt || now,
-    startedAt: payload.startedAt || null,
-    endedAt: payload.endedAt || null,
-    canceledAt: payload.canceledAt || null,
-    errorDetails: payload.errorDetails || null,
-    outcomeSummary: payload.outcomeSummary || null,
-    metadata: payload.metadata || {},
-    updatedAt: now,
-  };
-
-  validateCall(call);
-  const result = await callStore.createCall(call);
-  if (result.created) {
-    await recordCallAudit(result.call.id, 'call.created', {
-      patientId: result.call.patientId,
-      scheduleId: result.call.scheduleId,
-      status: result.call.status,
-      idempotencyKey: result.call.idempotencyKey,
-    }, options.actor || { type: 'system' }, now);
-  }
-
-  return { call: serializeCall(result.call), created: result.created };
+  objectInput(payload, ['patientId', 'scheduleId', 'idempotencyKey', 'dueAt', 'metadata']);
+  uuid(payload.patientId); uuid(payload.scheduleId);
+  const key = payload.idempotencyKey || options.idempotencyKey;
+  if (typeof key !== 'string' || !key.trim() || key.length > 200) throw fail(400, 'VALIDATION_ERROR', 'idempotencyKey is required (maximum 200 characters).');
+  if (payload.dueAt !== undefined && (typeof payload.dueAt !== 'string' || !Number.isFinite(Date.parse(payload.dueAt)))) throw fail(400, 'VALIDATION_ERROR', 'dueAt must be a timestamp.');
+  if (payload.metadata !== undefined) objectInput(payload.metadata, ['source', 'dueAt', 'timezone', 'retryCount']);
+  const input = { patientId: payload.patientId.toLowerCase(), scheduleId: payload.scheduleId.toLowerCase(), dueAt: payload.dueAt || null, metadata: payload.metadata || {} };
+  return transaction(async () => {
+    await query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [key]);
+    const { rows: [existing] } = await query('SELECT id,creation_input FROM call_attempts WHERE idempotency_key=$1', [key]);
+    if (existing) {
+      if (!isDeepStrictEqual(existing.creation_input, input)) throw fail(409, 'IDEMPOTENCY_CONFLICT', 'Idempotency key has different inputs.');
+      return { call: serializeCall(await callStore.getCall(existing.id)), created: false };
+    }
+    const { rows: [schedule] } = await query('SELECT * FROM checkin_schedules WHERE id=$1 FOR UPDATE', [input.scheduleId]);
+    if (!schedule || schedule.patient_id !== input.patientId) throw fail(400, 'INVALID_SCHEDULE', 'Schedule must belong to the patient.');
+    if (schedule.status !== 'active') throw fail(409, 'SCHEDULE_INACTIVE', 'Schedule is not active.');
+    const now = options.now || new Date().toISOString();
+    const call = {
+      id: crypto.randomUUID(), patientId: input.patientId, scheduleId: input.scheduleId,
+      status: 'queued', attemptNumber: await callStore.getNextAttemptNumber(input.patientId, input.scheduleId),
+      providerIds: normalizeProviderIds(), transcriptStatus: 'not_started', outcome: null, escalationFlag: false,
+      idempotencyKey: key, createdAt: now, queuedAt: now, startedAt: null, endedAt: null, canceledAt: null,
+      errorDetails: null, outcomeSummary: null, metadata: input.metadata, updatedAt: now,
+    };
+    await callStore.createCall(call);
+    await query('UPDATE call_attempts SET creation_input=$1 WHERE id=$2', [input, call.id]);
+    await recordCallAudit(call.id, 'call.created', { status: call.status }, options.actor || { type: 'system' }, now);
+    return { call: serializeCall(call), created: true };
+  });
 }
 
 async function listCalls(filters = {}) {
+  objectInput(filters, ['patientId','scheduleId','status']);
+  if (filters.patientId) uuid(filters.patientId);
+  if (filters.scheduleId) uuid(filters.scheduleId);
+  if (filters.status) validateEnum(filters.status, CALL_STATUSES, 'status');
   const calls = await callStore.listCalls(filters);
   return calls.map(serializeCall);
 }
@@ -94,83 +87,47 @@ async function getCallDetail(callId) {
 }
 
 async function updateCallStatus(callId, payload = {}, options = {}) {
-  const call = await requireCall(callId);
-  const nextStatus = normalizeString(payload.status);
-  validateEnum(nextStatus, CALL_STATUSES, 'status');
-  assertTransition(call.status, nextStatus);
-
-  const now = options.now || new Date().toISOString();
-  const updated = {
-    ...call,
-    status: nextStatus,
-    providerIds: normalizeProviderIds({ ...call.providerIds, ...(payload.providerIds || {}) }),
-    transcriptStatus: payload.transcriptStatus || call.transcriptStatus,
-    errorDetails: payload.errorDetails === undefined ? call.errorDetails : normalizeErrorDetails(payload.errorDetails),
-    metadata: { ...(call.metadata || {}), ...(payload.metadata || {}) },
-    startedAt: call.startedAt,
-    endedAt: call.endedAt,
-    canceledAt: call.canceledAt,
-    updatedAt: now,
-  };
-
-  if (nextStatus === 'starting' || nextStatus === 'in_progress') {
-    updated.startedAt = updated.startedAt || now;
-  }
-  if (nextStatus === 'completed' || nextStatus === 'failed') {
-    updated.endedAt = updated.endedAt || now;
-  }
-  if (nextStatus === 'canceled') {
-    updated.canceledAt = updated.canceledAt || now;
-    updated.endedAt = updated.endedAt || now;
-  }
-
-  validateCall(updated);
-  const saved = await callStore.saveCall(updated);
-  await recordCallAudit(saved.id, 'call.status_updated', {
-    previousStatus: call.status,
-    status: saved.status,
-    providerIds: saved.providerIds,
-    errorDetails: saved.errorDetails,
-  }, options.actor || { type: 'system' }, now);
-
-  return serializeCall(saved);
+  objectInput(payload, ['status', 'providerIds', 'transcriptStatus', 'errorDetails']);
+  validateEnum(payload.status, CALL_STATUSES, 'status');
+  return transition(callId, payload, options, 'call.status_updated');
 }
 
 async function finalizeCall(callId, payload = {}, options = {}) {
-  const call = await requireCall(callId);
-  if (call.status === 'canceled') {
-    throw createUiError('INVALID_STATUS_TRANSITION', 'Canceled calls cannot be finalized.', { status: call.status });
+  objectInput(payload, ['transcriptStatus', 'outcome', 'outcomeSummary', 'escalationFlag', 'errorDetails']);
+  return transition(callId, { ...payload, status: payload.errorDetails ? 'failed' : 'completed' }, options, 'call.finalized');
+}
+
+async function transition(callId, payload, options, action) {
+  uuid(callId);
+  if (payload.providerIds !== undefined) {
+    objectInput(payload.providerIds, ['callId','conversationId']);
+    for (const value of Object.values(payload.providerIds)) if (value !== null && (typeof value !== 'string' || value.length > 200)) throw fail(400, 'VALIDATION_ERROR', 'Invalid provider identifier.');
   }
-
-  const now = options.now || new Date().toISOString();
-  const transcriptStatus = payload.transcriptStatus || call.transcriptStatus || 'pending';
-  validateEnum(transcriptStatus, TRANSCRIPT_STATUSES, 'transcriptStatus');
-
-  const completed = !payload.errorDetails;
-  const updated = {
-    ...call,
-    status: completed ? 'completed' : 'failed',
-    transcriptStatus,
-    outcome: payload.outcome || call.outcome || (completed ? 'completed' : 'failed'),
-    outcomeSummary: payload.outcomeSummary || call.outcomeSummary || null,
-    escalationFlag: Boolean(payload.escalationFlag ?? call.escalationFlag),
-    errorDetails: payload.errorDetails ? normalizeErrorDetails(payload.errorDetails) : call.errorDetails,
-    metadata: { ...(call.metadata || {}), ...(payload.metadata || {}) },
-    endedAt: call.endedAt || now,
-    updatedAt: now,
-  };
-
-  validateCall(updated);
-  const saved = await callStore.saveCall(updated);
-  await recordCallAudit(saved.id, 'call.finalized', {
-    previousStatus: call.status,
-    status: saved.status,
-    outcome: saved.outcome,
-    transcriptStatus: saved.transcriptStatus,
-    escalationFlag: saved.escalationFlag,
-  }, options.actor || { type: 'system' }, now);
-
-  return serializeCall(saved);
+  if (payload.transcriptStatus !== undefined) validateEnum(payload.transcriptStatus, TRANSCRIPT_STATUSES, 'transcriptStatus');
+  if (payload.escalationFlag !== undefined && typeof payload.escalationFlag !== 'boolean') throw fail(400, 'VALIDATION_ERROR', 'Invalid escalation flag.');
+  for (const field of ['outcome','outcomeSummary']) if (payload[field] !== undefined && (typeof payload[field] !== 'string' || payload[field].length > 2000)) throw fail(400, 'VALIDATION_ERROR', 'Invalid outcome.');
+  if (payload.errorDetails !== undefined && payload.errorDetails !== null) objectInput(payload.errorDetails, ['code','message','retryable','providerStatus','details']);
+  return transaction(async () => {
+    const { rows: [locked] } = await query('SELECT last_transition FROM call_attempts WHERE id=$1 FOR UPDATE', [callId]);
+    if (!locked) throw fail(404, 'CALL_NOT_FOUND', 'Call attempt was not found.');
+    const call = await callStore.getCall(callId);
+    if (call.status === payload.status) {
+      if (isDeepStrictEqual(locked.last_transition, { action, payload })) return serializeCall(call);
+      throw fail(409, 'INVALID_STATUS_TRANSITION', 'Only an identical transition replay is allowed.');
+    }
+    assertTransition(call.status, payload.status);
+    const now = options.now || new Date().toISOString();
+    const updated = { ...call, ...payload, updatedAt: now,
+      providerIds: { ...call.providerIds, ...(payload.providerIds || {}) } };
+    if (['starting','in_progress'].includes(updated.status)) updated.startedAt = call.startedAt || now;
+    if (TERMINAL_STATUSES.includes(updated.status)) updated.endedAt = call.endedAt || now;
+    if (updated.status === 'canceled') updated.canceledAt = now;
+    validateCall(updated);
+    await callStore.saveCall(updated);
+    await query('UPDATE call_attempts SET last_transition=$1 WHERE id=$2', [{ action, payload }, callId]);
+    await recordCallAudit(callId, action, { previousStatus: call.status, status: updated.status }, options.actor || { type: 'system' }, now);
+    return serializeCall(updated);
+  });
 }
 
 async function seedSchedule(payload = {}, options = {}) {
@@ -208,7 +165,7 @@ async function recordCallAudit(callId, action, metadata, actor, now) {
 }
 
 async function requireCall(callId) {
-  validateRequired(callId, 'callId');
+  uuid(callId);
   const call = await callStore.getCall(callId);
   if (!call) {
     throw createUiError('CALL_NOT_FOUND', 'Call attempt was not found.', { callId });
@@ -239,16 +196,13 @@ function validateEnum(value, allowedValues, field) {
   }
 }
 
+const TRANSITIONS = {
+  queued: ['starting','canceled','failed'], starting: ['in_progress','failed','canceled'],
+  in_progress: ['finalizing','failed','canceled'], finalizing: ['completed','failed'],
+  completed: [], failed: [], canceled: [],
+};
 function assertTransition(currentStatus, nextStatus) {
-  if (currentStatus === nextStatus) {
-    return;
-  }
-  if (TERMINAL_STATUSES.includes(currentStatus)) {
-    throw createUiError('INVALID_STATUS_TRANSITION', 'Terminal calls cannot transition to another status.', {
-      currentStatus,
-      nextStatus,
-    });
-  }
+  if (!TRANSITIONS[currentStatus]?.includes(nextStatus)) throw fail(409, 'INVALID_STATUS_TRANSITION', 'Call state cannot transition to the requested state.');
 }
 
 function normalizeProviderIds(providerIds = {}) {
