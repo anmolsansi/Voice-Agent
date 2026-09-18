@@ -1,3 +1,5 @@
+> **Foundation update (2026-09-17):** current setup and contracts are in [Foundation guide](FOUNDATION_GUIDE.md). Staff auth now uses database-backed opaque sessions; shared-token/JWT instructions below are historical and must not be used. Both 004 migrations are preserved. See the progress record for verified results and remaining release gates.
+
 # Local Development
 
 ## Prerequisites

@@ -1,6 +1,50 @@
-# Foundation implementation baseline — 2026-09-17
+# CheckIn Care repository context — foundation implementation
 
-Verified at `ceb8fc0`: shared-token authentication is the only implemented staff login. JWT configuration/docs do not establish a JWT implementation. Both 004 migrations apply successfully on PostgreSQL 16; preserve their filenames. Call endpoints are unprotected and call-detail persistence is independent of attempts. Foundation work supersedes the target architecture below; see `FOUNDATION_PROGRESS.md`.
+Current source map (2026-09-17). Read `FOUNDATION_GUIDE.md` for executable setup, contracts, rollback, and verification; `FOUNDATION_PROGRESS.md` records evidence rather than product claims.
+
+## Stack and boundaries
+
+Next.js 14.2.30 / React 18.3.1 / TypeScript 5.8.3 frontend; native Node HTTP backend (Express is installed but is not the dispatcher); PostgreSQL through pg; node-pg-migrate; PDFKit. Node test runner, fixture harness, PostgreSQL integration tests, and Playwright browser tests have separate commands.
+
+## Canonical runtime
+
+- `src/app.js`: route matching, default-deny staff guard, admin/machine/public policy, request IDs and safe errors.
+- `src/modules/auth/service.js`: staff identities, scrypt passwords, PostgreSQL sessions, login counters, bootstrap/recovery, last-admin lock.
+- `src/modules/intake`: existing patient session save/submit and staff review/PDF. Public intake is synthetic-evaluation scope.
+- `src/modules/calls/service.js`: canonical attempt creation, strict lifecycle, idempotency, locking, atomic audit.
+- `src/modules/calls/call-service.js`: linked supplementary call detail; no independent lifecycle or recording writes.
+- `src/lib/db/postgres.js`: shared query/transaction context; configured database failures fail closed.
+- `src/jobs/checkins.js`: persisted schedule enqueue; only its backend route uses the scoped scheduler credential.
+- `lib/staff-auth.ts`, `lib/staff-intake-server.ts`: server-only session forwarding/data fetching. `lib/staff-intake.ts` contains safe display helpers used by client components.
+- `app/api/staff`: browser session cookies, CSRF acquisition, login/logout/password and review/PDF proxies. Backend checks remain authoritative.
+- `src/services/*.mjs`, `src/voice`, sample dashboards/reports: synthetic prototype surfaces; do not extend them as independent patient/call persistence.
+
+## Routes and data
+
+Default access is staff. Public: health/readiness, login, and explicitly listed patient intake create/resume/field/submit routes. Calls read is staff; calls write and staff-user management are admin. Account password/me/logout are available during forced password change. Enqueue is machine-only. Next.js additionally checks origin/CSRF for browser mutations.
+
+Patients, schedules, attempts, supplementary detail, and audit ownership are defined in FOUNDATION_GUIDE.md. Staff authentication has no memory fallback and no legacy shared-token/JWT mode. Anonymous intake is not silently matched to patient records.
+
+005 adds staff identity. 006 adds UUID foreign keys, attempt/detail ownership, allocation constraints, and replay metadata. Preserve existing 004 filenames. Historic orphan data requires explicit mapping; do not infer identities.
+
+## Verification
+
+`npm test`: unit and intake route tests (intake auth is isolated; real auth tested below).
+`npm run test:integration`: requires TEST_DATABASE_URL, real PostgreSQL, sequential fixture isolation; destructive only to explicitly chosen test data.
+`npm run check:voice-agent`: synthetic framework-neutral fixture scenarios.
+`npm run test:browser`: Chromium, ports 3100/3101, actual patient/staff forms and PDF.
+`npm run lint`, `npm run typecheck`, `npm run build`: static/build gates.
+CI configuration: `.github/workflows/foundation.yml`.
+
+## Known limits
+
+Sample voice/report data is not live operational data. No real telephony, clinical launch approval, shared tenancy, recording pipeline, or deployed staging proof is claimed. Inherited dependency advisories remain a release blocker. Geography/provider/live-data decisions remain downstream gates.
+
+---
+
+# Historical architecture audit (superseded where it conflicts with the implementation above)
+
+The following retained narrative describes the pre-foundation state and target product direction. It is not current authentication or migration guidance.
 
 # CheckIn Care Repository Context
 

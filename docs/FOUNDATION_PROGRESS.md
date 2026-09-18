@@ -26,36 +26,36 @@ The parent checklist is the source of implementation status; unchecked means not
 - [x] 18 Reset and password change
 - [x] 19 Last-admin concurrency invariant
 - [x] 20 Management/recovery tests
-- [ ] 21 Email/password UI
-- [ ] 22 Session forwarding and CSRF
-- [ ] 23 Intake/PDF/report protection
-- [ ] 24 Calls and scheduler protection
-- [ ] 25 Bypass and legacy-token tests
-- [ ] 26 Patient/schedule foreign keys
-- [ ] 27 Attempt/detail linkage
-- [ ] 28 Durable synthetic seed
-- [ ] 29 Lifecycle projection
-- [ ] 30 Migration/relationship tests
-- [ ] 31 Duplicate route/error path
-- [ ] 32 Attempt input contract
-- [ ] 33 Detail write contract/callers
-- [ ] 34 Input and actor validation
-- [ ] 35 API contract tests
-- [ ] 36 State transition map
-- [ ] 37 Creation idempotency
-- [ ] 38 Locked attempt allocation
-- [ ] 39 Atomic audit/state writes
-- [ ] 40 Concurrency/replay/failure tests
-- [ ] 41 Authoritative missing-record reads
-- [ ] 42 Fail-closed persistence
-- [ ] 43 Atomic detail persistence
-- [ ] 44 Server-owned enqueue inputs
-- [ ] 45 Restart/outage/rollback/enqueue tests
-- [ ] 46 Explicit test commands
-- [ ] 47 CI
-- [ ] 48 Browser regressions
-- [ ] 49 Operations/rollback docs
-- [ ] 50 Final acceptance evidence
+- [x] 21 Email/password UI
+- [x] 22 Session forwarding and CSRF
+- [x] 23 Intake/PDF/report protection
+- [x] 24 Calls and scheduler protection
+- [x] 25 Bypass and legacy-token tests
+- [x] 26 Patient/schedule foreign keys
+- [x] 27 Attempt/detail linkage
+- [x] 28 Durable synthetic seed
+- [x] 29 Lifecycle projection
+- [x] 30 Migration/relationship tests
+- [x] 31 Duplicate route/error path
+- [x] 32 Attempt input contract
+- [x] 33 Detail write contract/callers
+- [x] 34 Input and actor validation
+- [x] 35 API contract tests
+- [x] 36 State transition map
+- [x] 37 Creation idempotency
+- [x] 38 Locked attempt allocation
+- [x] 39 Atomic audit/state writes
+- [x] 40 Concurrency/replay/failure tests
+- [x] 41 Authoritative missing-record reads
+- [x] 42 Fail-closed persistence
+- [x] 43 Atomic detail persistence
+- [x] 44 Server-owned enqueue inputs
+- [x] 45 Restart/outage/rollback/enqueue tests
+- [x] 46 Explicit test commands
+- [x] 47 CI
+- [x] 48 Browser regressions
+- [x] 49 Operations/rollback docs
+- [x] 50 Final acceptance evidence
 
 ## Evidence
 
@@ -66,3 +66,7 @@ Baseline: 22/22 tests passed; lint passed with pre-existing radio aria warning; 
 Tracking: https://github.com/anmolsansi/Voice-Agent/issues/33
 
 Identity checkpoint: password hashing unit test and five PostgreSQL integration scenarios pass (bootstrap, permissions, expiry/logout, concurrent last-admin protection, recovery, persistent throttling). CLI is validated further in final acceptance.
+
+Final local implementation checkpoint:17 ordinary tests,23 PostgreSQL integration tests,3 browser scenarios, lint/typecheck/fixtures/build and CLI checks pass. See [full evidence](FOUNDATION_EVIDENCE.md), [operator guide](FOUNDATION_GUIDE.md), and [ten review packets](tickets/Pending/).
+
+Checklist completion means implementation and local verification, not human approval, staging deployment or commercial release. Hosted CI is tracked separately in the evidence record. Microtasks vary in effort; no equal 2% estimate is claimed.
