@@ -1,4 +1,5 @@
 'use client';
+import { staffMutation } from '@/lib/staff-client';
 
 import { useState } from 'react';
 import { type IntakeSession } from '@/lib/intake-session';
@@ -40,7 +41,7 @@ export function StaffReviewPanel({ session }: StaffReviewPanelProps) {
     setErrorMessage('');
 
     try {
-      const response = await fetch(`/api/staff/sessions/${encodeURIComponent(currentSession.publicSessionId)}/review`, {
+      const response = await staffMutation(`/api/staff/sessions/${encodeURIComponent(currentSession.publicSessionId)}/review`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,196 +1,62 @@
-const test = require('node:test');
+const { test, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
-const http = require('http');
-
-const { createApp } = require('../../app');
-const { closePool } = require('../../lib/db/postgres');
-const { callStore } = require('./store');
+const { setup, api, query, closePool } = require('../../../tests/helpers/database.cjs');
 const { enqueueEligibleCheckInCalls } = require('../../jobs/checkins');
-
-async function resetStore() {
-  await callStore.clearAll();
-  await closePool();
-  delete process.env.DATABASE_URL;
-  process.env.ALLOW_MEMORY_FALLBACK = 'true';
-  process.env.NODE_ENV = 'test';
-}
-
-function startTestServer() {
-  const app = createApp({ appName: 'test', port: 0, nodeEnv: 'test' });
-  const server = http.createServer(app);
-
-  return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      resolve({
-        server,
-        baseUrl: `http://127.0.0.1:${address.port}`,
-      });
-    });
-  });
-}
-
-async function stopTestServer(server) {
-  await new Promise((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
-}
-
-test.beforeEach(async () => {
-  await resetStore();
-});
-
-test.after(async () => {
-  await resetStore();
-});
-
-test('POST /api/calls creates idempotent call attempts and GET endpoints list/detail them', async () => {
-  const { server, baseUrl } = await startTestServer();
-
+let fixture;
+beforeEach(async () => { fixture = await setup(); });
+after(closePool);
+function input() { const { patientId, scheduleId, idempotencyKey } = fixture; return { patientId, scheduleId, idempotencyKey }; }
+test('authenticated call creation, duplicate requests, lists, detail and forged actors', async () => {
+  const client = await api(fixture.token);
   try {
-    const body = {
-      patientId: 'patient-123',
-      scheduleId: 'schedule-abc',
-      idempotencyKey: 'same-call-window',
-    };
-
-    const firstResponse = await fetch(`${baseUrl}/api/calls`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const firstPayload = await firstResponse.json();
-
-    const secondResponse = await fetch(`${baseUrl}/api/calls`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const secondPayload = await secondResponse.json();
-
-    assert.equal(firstResponse.status, 201);
-    assert.equal(secondResponse.status, 200);
-    assert.equal(firstPayload.created, true);
-    assert.equal(secondPayload.created, false);
-    assert.equal(secondPayload.call.id, firstPayload.call.id);
-    assert.equal(firstPayload.call.status, 'queued');
-    assert.equal(firstPayload.call.attemptNumber, 1);
-    assert.equal(firstPayload.call.transcriptStatus, 'not_started');
-
-    const listResponse = await fetch(`${baseUrl}/api/calls?patientId=patient-123`);
-    const listPayload = await listResponse.json();
-    assert.equal(listResponse.status, 200);
-    assert.equal(listPayload.total, 1);
-    assert.equal(listPayload.items[0].id, firstPayload.call.id);
-
-    const detailResponse = await fetch(`${baseUrl}/api/calls/${firstPayload.call.id}`);
-    const detailPayload = await detailResponse.json();
-    assert.equal(detailResponse.status, 200);
-    assert.equal(detailPayload.call.id, firstPayload.call.id);
-    assert.equal(detailPayload.auditEvents[0].action, 'call.created');
-  } finally {
-    await stopTestServer(server);
-  }
+    assert.equal((await client.request('/api/calls', input(), 'POST', null)).status, 401);
+    assert.equal((await client.request('/api/calls', { ...input(), actor: { type: 'admin' } })).status, 400);
+    const first = await client.request('/api/calls', input());
+    assert.equal(first.status, 201);
+    const { call } = await first.json();
+    assert.equal(call.status, 'queued'); assert.equal(call.attemptNumber, 1);
+    const again = await client.request('/api/calls', input());
+    assert.equal(again.status, 200); assert.equal((await again.json()).call.id, call.id);
+    const list = await client.request(`/api/calls?patientId=${fixture.patientId}`);
+    assert.equal((await list.json()).items[0].id, call.id);
+    const detail = await client.request(`/api/calls/${call.id}`);
+    assert.equal((await detail.json()).auditEvents[0].action, 'call.created');
+    assert.equal((await client.request('/api/calls?patientId=invalid')).status, 400);
+    assert.equal((await fetch(client.base + '/api/calls', { method: 'POST', headers: { authorization: `Bearer ${fixture.token}` }, body: '{' })).status, 400);
+    assert.equal((await fetch(client.base + '/api/calls', { method: 'POST', headers: { authorization: `Bearer ${fixture.token}` }, body: 'x'.repeat(270000) })).status, 413);
+  } finally { await client.close(); }
 });
-
-test('call status update and finalization return dashboard-ready timestamps and outcome fields', async () => {
-  const { server, baseUrl } = await startTestServer();
-
+test('ordered lifecycle returns timestamps and outcome; delayed events cannot reopen terminal calls', async () => {
+  const client = await api(fixture.token);
   try {
-    const createResponse = await fetch(`${baseUrl}/api/calls`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ patientId: 'patient-123', scheduleId: 'schedule-abc' }),
-    });
-    const { call } = await createResponse.json();
-
-    const statusResponse = await fetch(`${baseUrl}/api/calls/${call.id}/status`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        status: 'in_progress',
-        providerIds: { callId: 'telnyx-call-1', conversationId: 'conversation-1' },
-        transcriptStatus: 'pending',
-      }),
-    });
-    const statusPayload = await statusResponse.json();
-
-    assert.equal(statusResponse.status, 200);
-    assert.equal(statusPayload.call.status, 'in_progress');
-    assert.ok(statusPayload.call.startedAt);
-    assert.equal(statusPayload.call.providerIds.callId, 'telnyx-call-1');
-
-    const finalizeResponse = await fetch(`${baseUrl}/api/calls/${call.id}/finalize`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        transcriptStatus: 'pending',
-        outcome: 'needs_follow_up',
-        outcomeSummary: 'Patient requested a nurse callback after the check-in.',
-        escalationFlag: true,
-      }),
-    });
-    const finalizePayload = await finalizeResponse.json();
-
-    assert.equal(finalizeResponse.status, 200);
-    assert.equal(finalizePayload.call.status, 'completed');
-    assert.equal(finalizePayload.call.outcome, 'needs_follow_up');
-    assert.equal(finalizePayload.call.escalationFlag, true);
-    assert.ok(finalizePayload.call.endedAt);
-    assert.equal(finalizePayload.call.errorDetails, null);
-  } finally {
-    await stopTestServer(server);
-  }
+    const { call } = await (await client.request('/api/calls', input())).json();
+    assert.equal((await client.request(`/api/calls/${call.id}/status`, { status: 'in_progress' })).status, 409);
+    for (const status of ['starting','in_progress','finalizing']) assert.equal((await client.request(`/api/calls/${call.id}/status`, { status, providerIds: { callId: 'sandbox-1' }, transcriptStatus: 'pending' })).status, 200);
+    const finish = { transcriptStatus: 'pending', outcome: 'needs_follow_up', outcomeSummary: 'Synthetic callback request', escalationFlag: true };
+    const result = await client.request(`/api/calls/${call.id}/finalize`, finish);
+    const payload = await result.json(); assert.equal(result.status, 200, JSON.stringify(payload));
+    assert.equal(payload.call.status, 'completed'); assert.equal(payload.call.escalationFlag, true);
+    assert.ok(payload.call.startedAt); assert.ok(payload.call.endedAt);
+    assert.equal((await client.request(`/api/calls/${call.id}/finalize`, finish)).status, 200);
+    assert.equal((await client.request(`/api/calls/${call.id}/finalize`, { outcome: 'different' })).status, 409);
+    assert.equal((await client.request(`/api/calls/${call.id}/status`, { status: 'starting' })).status, 409);
+  } finally { await client.close(); }
 });
-
-test('worker enqueues eligible schedules once and reports duplicate executions', async () => {
-  const now = '2026-05-11T12:00:00.000Z';
-  const schedules = [
-    {
-      id: '7d30d4ee-763d-4713-b992-67cb4b34f1c2',
-      patientId: 'patient-123',
-      status: 'active',
-      timezone: 'America/Chicago',
-      nextDueAt: '2026-05-11T11:55:00.000Z',
-    },
-  ];
-
-  const firstResult = await enqueueEligibleCheckInCalls({ now, schedules });
-  const secondResult = await enqueueEligibleCheckInCalls({ now, schedules });
-
-  assert.equal(firstResult.evaluated, 1);
-  assert.equal(firstResult.enqueued, 1);
-  assert.equal(firstResult.duplicates, 0);
-  assert.equal(secondResult.enqueued, 0);
-  assert.equal(secondResult.duplicates, 1);
-  assert.equal(secondResult.results[0].callId, firstResult.results[0].callId);
+test('worker reads persisted schedules and repeated enqueue is idempotent', async () => {
+  const first = await enqueueEligibleCheckInCalls();
+  const second = await enqueueEligibleCheckInCalls();
+  assert.equal(first.enqueued, 1); assert.equal(second.duplicates, 1);
+  assert.equal(first.results[0].callId, second.results[0].callId);
 });
-
-test('POST /api/jobs/checkins/enqueue accepts cron-compatible schedule payloads', async () => {
-  const { server, baseUrl } = await startTestServer();
-
+test('scheduler API requires scoped machine token and rejects caller-owned schedules', async () => {
+  const client = await api(fixture.token);
+  process.env.SCHEDULER_TOKEN = 'synthetic-scheduler-credential-000000000000';
   try {
-    const response = await fetch(`${baseUrl}/api/jobs/checkins/enqueue`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        now: '2026-05-11T12:00:00.000Z',
-        schedules: [
-          {
-            id: '3b63ed35-bd57-4275-9a99-b6b20c4f0eec',
-            patientId: 'patient-456',
-            status: 'active',
-            nextDueAt: '2026-05-11T10:00:00.000Z',
-          },
-        ],
-      }),
-    });
-    const payload = await response.json();
-
-    assert.equal(response.status, 200);
-    assert.equal(payload.enqueued, 1);
-    assert.equal(payload.results[0].status, 'enqueued');
-  } finally {
-    await stopTestServer(server);
-  }
+    assert.equal((await client.request('/api/jobs/checkins/enqueue', {})).status, 401);
+    assert.equal((await client.request('/api/jobs/checkins/enqueue', { schedules: [] }, 'POST', process.env.SCHEDULER_TOKEN)).status, 400);
+    const response = await client.request('/api/jobs/checkins/enqueue', {}, 'POST', process.env.SCHEDULER_TOKEN);
+    assert.equal(response.status, 200); assert.equal((await response.json()).enqueued, 1);
+    assert.equal((await client.request('/api/calls', undefined, 'GET', process.env.SCHEDULER_TOKEN)).status, 401);
+    const { rows: [count] } = await query('SELECT count(*)::int AS n FROM call_attempts'); assert.equal(count.n, 1);
+  } finally { delete process.env.SCHEDULER_TOKEN; await client.close(); }
 });

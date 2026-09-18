@@ -1,3 +1,4 @@
+import { getStaffIntakeSession } from '@/lib/staff-intake-server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { StaffReviewPanel } from '@/components/staff-review-panel';
@@ -7,7 +8,6 @@ import {
   getPatientName,
   getSessionFieldDisplayValue,
   getStatusTone,
-  getStaffIntakeSession,
 } from '@/lib/staff-intake';
 
 export default async function IntakeDetailPage({

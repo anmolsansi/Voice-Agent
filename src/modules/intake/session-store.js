@@ -180,7 +180,7 @@ class IntakeSessionStore {
       return this.memory.getSubmission(sessionId);
     }
 
-    return this.memory.getSubmission(sessionId);
+    return null;
   }
 
   async get(sessionId) {
@@ -202,7 +202,7 @@ class IntakeSessionStore {
       return this.memory.get(sessionId);
     }
 
-    return this.memory.get(sessionId);
+    return null;
   }
 
   async getByPublicSessionId(publicSessionId) {
@@ -224,7 +224,7 @@ class IntakeSessionStore {
       return this.memory.getByPublicSessionId(publicSessionId);
     }
 
-    return this.memory.getByPublicSessionId(publicSessionId);
+    return null;
   }
 
   async list() {

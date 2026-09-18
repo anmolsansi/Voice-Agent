@@ -29,7 +29,7 @@ function createHealthRoutes(config) {
     });
   });
 
-  return router.all();
+  return router.all().map((route) => ({ ...route, access: 'public' }));
 }
 
 module.exports = {

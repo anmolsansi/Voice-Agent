@@ -2,7 +2,7 @@ const { createCallAttempt, listEligibleSchedules } = require('../modules/calls/s
 
 async function enqueueEligibleCheckInCalls(options = {}) {
   const now = options.now || new Date().toISOString();
-  const schedules = options.schedules || await listEligibleSchedules(now);
+  const schedules = await listEligibleSchedules(now);
   const results = [];
 
   for (const schedule of schedules) {
@@ -26,6 +26,7 @@ async function enqueueEligibleCheckInCalls(options = {}) {
         patientId: schedule.patientId,
         scheduleId: schedule.id,
         idempotencyKey,
+        dueAt: schedule.nextDueAt,
         metadata: {
           source: 'checkin-worker',
           dueAt: schedule.nextDueAt,

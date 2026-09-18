@@ -1,3 +1,4 @@
+import { listStaffIntakeSessions } from '@/lib/staff-intake-server';
 import Link from 'next/link';
 import { EmptyState } from '@/components/staff-states';
 import {
@@ -5,7 +6,6 @@ import {
   formatSessionDateTime,
   getPatientName,
   getStatusTone,
-  listStaffIntakeSessions,
 } from '@/lib/staff-intake';
 
 export default async function IntakeQueuePage() {

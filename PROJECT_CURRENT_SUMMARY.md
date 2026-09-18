@@ -1,3 +1,5 @@
+> **Foundation update (2026-09-17):** current setup and contracts are in [Foundation guide](docs/FOUNDATION_GUIDE.md). Staff auth now uses database-backed opaque sessions; shared-token/JWT instructions below are historical and must not be used. Both 004 migrations are preserved. See the progress record for verified results and remaining release gates.
+
 # CheckIn Care / Voice-Agent — Current Project Summary
 
 _Last updated: 2026-05-11_

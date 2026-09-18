@@ -113,47 +113,8 @@ class CallStore {
   }
 
   async createCall(call) {
-    const activePool = getPool();
-
-    if (!activePool) {
-      const existing = call.idempotencyKey ? this.memory.getCallByIdempotencyKey(call.idempotencyKey) : null;
-      if (existing) {
-        return { call: existing, created: false };
-      }
-      return { call: this.memory.saveCall(call), created: true };
-    }
-
-    const client = await activePool.connect();
-    try {
-      await client.query('begin');
-      if (call.idempotencyKey) {
-        const existingResult = await client.query(callSelectSql('where idempotency_key = $1'), [call.idempotencyKey]);
-        if (existingResult.rows[0]) {
-          await client.query('commit');
-          const existing = mapCallRow(existingResult.rows[0]);
-          this.memory.saveCall(existing);
-          return { call: existing, created: false };
-        }
-      }
-      await client.query(callUpsertSql(), callParams(call));
-      await client.query('commit');
-      this.memory.saveCall(call);
-      return { call: clone(call), created: true };
-    } catch (error) {
-      try {
-        await client.query('rollback');
-      } catch (_rollbackError) {
-        // Best effort rollback; the original error is more useful to callers.
-      }
-      this.handlePersistenceError(error);
-      const existing = call.idempotencyKey ? this.memory.getCallByIdempotencyKey(call.idempotencyKey) : null;
-      if (existing) {
-        return { call: existing, created: false };
-      }
-      return { call: this.memory.saveCall(call), created: true };
-    } finally {
-      client.release();
-    }
+    await query(callUpsertSql(), callParams(call));
+    return { call: clone(call), created: true };
   }
 
   async getCall(callId) {
@@ -169,7 +130,7 @@ class CallStore {
       return this.memory.getCall(callId);
     }
 
-    return this.memory.getCall(callId);
+    return null;
   }
 
   async getCallByIdempotencyKey(idempotencyKey) {
@@ -185,7 +146,7 @@ class CallStore {
       return this.memory.getCallByIdempotencyKey(idempotencyKey);
     }
 
-    return this.memory.getCallByIdempotencyKey(idempotencyKey);
+    return null;
   }
 
   async listCalls(filters = {}) {
@@ -210,7 +171,7 @@ class CallStore {
   async getNextAttemptNumber(patientId, scheduleId) {
     try {
       const result = await query(
-        'select count(*)::integer as attempt_count from call_attempts where patient_id = $1 and schedule_id = $2',
+        'select coalesce(max(attempt_number),0)::integer as attempt_count from call_attempts where patient_id = $1 and schedule_id = $2',
         [patientId, scheduleId],
       );
       return Number(result.rows[0]?.attempt_count || 0) + 1;

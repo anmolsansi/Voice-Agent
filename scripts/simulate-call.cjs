@@ -21,13 +21,13 @@ function arg(name, fallback) {
 
 async function main() {
   const baseUrl = arg('base-url', process.env.INTAKE_API_BASE_URL || `http://127.0.0.1:${process.env.BACKEND_PORT || '3001'}`);
-  const patientId = arg('patient-id', 'local-patient-001');
-  const scheduleId = arg('schedule-id', 'local-schedule-001');
+  const patientId = arg('patient-id', '00000000-0000-4000-8000-000000000101');
+  const scheduleId = arg('schedule-id', '00000000-0000-4000-8000-000000000102');
   const idempotencyKey = arg('idempotency-key', `local-sim:${patientId}:${scheduleId}`);
 
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/calls`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.STAFF_SESSION_TOKEN || ''}` },
     body: JSON.stringify({ patientId, scheduleId, idempotencyKey, metadata: { source: 'scripts/simulate-call' } }),
   });
   const body = await response.json().catch(() => null);
