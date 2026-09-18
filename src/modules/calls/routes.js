@@ -1,145 +1,31 @@
 const { enqueueEligibleCheckInCalls } = require('../../jobs/checkins');
 const { readJsonBody } = require('../../http/request');
 const { json } = require('../../http/response');
+const { objectInput, fail } = require('../../http/errors');
 const { createRouter } = require('../../http/router');
 const { getCallDetail: getPersistedCallDetail, persistCallDetail } = require('./call-service');
-const {
-  createCallAttempt,
-  finalizeCall,
-  getCallDetail,
-  getHttpStatus,
-  listCalls,
-  serializeError,
-  updateCallStatus,
-} = require('./service');
-
+const { createCallAttempt, finalizeCall, getCallDetail, listCalls, updateCallStatus } = require('./service');
 function createCallRoutes() {
   const router = createRouter();
-
-  router.get('/api/calls', async (_request, response, context) => {
-    try {
-      const filters = {
-        patientId: context.url.searchParams.get('patientId') || undefined,
-        scheduleId: context.url.searchParams.get('scheduleId') || undefined,
-        status: context.url.searchParams.get('status') || undefined,
-      };
-      const items = await listCalls(filters);
-      return json(response, 200, { items, total: items.length });
-    } catch (error) {
-      return json(response, getCallStatusCode(error), serializeCallError(error, 'Unable to list calls.'));
-    }
+  router.get('/api/calls', async (_req, res, ctx) => {
+    const filters = Object.fromEntries(ctx.url.searchParams);
+    const items = await listCalls(filters);
+    json(res, 200, { items, total: items.length });
   });
-
-  router.post('/api/calls', async (request, response) => {
-    try {
-      const payload = await readJsonBody(request);
-
-      if (isCallAttemptPayload(payload)) {
-        const result = await createCallAttempt(payload, { actor: { type: 'api', id: 'calls.create' } });
-        return json(response, result.created ? 201 : 200, result);
-      }
-
-      const callDetail = await persistCallDetail(payload);
-      return json(response, 201, { callDetail });
-    } catch (error) {
-      return writeCallError(response, error, 'Unable to persist call detail.');
-    }
-  });
-
-  router.get('/api/calls', async (_request, response, context) => {
-    try {
-      const filters = {
-        patientId: context.url.searchParams.get('patientId'),
-        scheduleId: context.url.searchParams.get('scheduleId'),
-        status: context.url.searchParams.get('status'),
-      };
-      const items = await listCalls(filters);
-      return json(response, 200, { items, total: items.length });
-    } catch (error) {
-      return writeCallError(response, error, 'Unable to list calls.');
-    }
-  });
-
-  router.get('/api/calls/:callId', async (_request, response, context) => {
-    try {
-      const detail = await getCallDetail(context.params.callId);
-      return json(response, 200, detail);
-    } catch (error) {
-      return writeCallError(response, error, 'Unable to load call.');
-    }
-  });
-
-  router.post('/api/calls/:callId/status', async (request, response, context) => {
-    try {
-      const payload = await readJsonBody(request);
-      const call = await updateCallStatus(context.params.callId, payload, { actor: { type: 'api', id: 'calls.status' } });
-      return json(response, 200, { call });
-    } catch (error) {
-      return writeCallError(response, error, 'Unable to update call status.');
-    }
-  });
-
-  router.post('/api/calls/:callId/finalize', async (request, response, context) => {
-    try {
-      const payload = await readJsonBody(request);
-      const call = await finalizeCall(context.params.callId, payload, { actor: { type: 'api', id: 'calls.finalize' } });
-      return json(response, 200, { call });
-    } catch (error) {
-      return writeCallError(response, error, 'Unable to finalize call.');
-    }
-  });
-
-  router.get('/api/calls/:publicCallId/detail', async (_request, response, context) => {
-    try {
-      const callDetail = await getPersistedCallDetail(context.params.publicCallId);
-      return json(response, 200, { callDetail });
-    } catch (error) {
-      return writeCallError(response, error, 'Unable to load call detail.');
-    }
-  });
-
-  router.post('/api/jobs/checkins/enqueue', async (request, response) => {
-    try {
-      const payload = await readJsonBody(request);
-      const result = await enqueueEligibleCheckInCalls(payload);
-      return json(response, 200, result);
-    } catch (error) {
-      return writeCallError(response, error, 'Unable to enqueue check-in calls.');
-    }
-  });
-
+  router.post('/api/calls', async (req, res, ctx) => {
+    const result = await createCallAttempt(await readJsonBody(req), { actor: ctx.actor });
+    json(res, result.created ? 201 : 200, result);
+  }, 'admin');
+  router.get('/api/calls/:callId', async (_req, res, ctx) => json(res, 200, await getCallDetail(ctx.params.callId)));
+  router.post('/api/calls/:callId/status', async (req, res, ctx) => json(res, 200, { call: await updateCallStatus(ctx.params.callId, await readJsonBody(req), { actor: ctx.actor }) }), 'admin');
+  router.post('/api/calls/:callId/finalize', async (req, res, ctx) => json(res, 200, { call: await finalizeCall(ctx.params.callId, await readJsonBody(req), { actor: ctx.actor }) }), 'admin');
+  router.put('/api/calls/:callId/detail', async (req, res, ctx) => json(res, 200, { callDetail: await persistCallDetail(ctx.params.callId, await readJsonBody(req), { actor: ctx.actor }) }), 'admin');
+  router.get('/api/calls/:publicCallId/detail', async (_req, res, ctx) => json(res, 200, { callDetail: await getPersistedCallDetail(ctx.params.publicCallId) }));
+  router.post('/api/jobs/checkins/enqueue', async (req, res) => {
+    objectInput(await readJsonBody(req), []);
+    if (process.env.FEATURE_CALL_SIMULATION === 'false') throw fail(409, 'SIMULATION_DISABLED', 'Call simulation is disabled.');
+    json(res, 200, await enqueueEligibleCheckInCalls());
+  }, 'scheduler');
   return router.all();
 }
-
-function isCallAttemptPayload(payload = {}) {
-  return Boolean(payload.patientId || payload.scheduleId || payload.idempotencyKey || payload.attemptNumber);
-}
-
-function writeCallError(response, error, fallbackMessage) {
-  if (error.code === 'INVALID_CALL_DETAIL' || error.code === 'INVALID_PUBLIC_CALL_ID') {
-    return json(response, 400, {
-      error: 'Invalid request',
-      message: error.message,
-    });
-  }
-
-  if (error.code === 'CALL_NOT_FOUND') {
-    return json(response, 404, {
-      error: 'Call not found',
-      message: error.message,
-    });
-  }
-
-  if (error.code === 'PERSISTENCE_UNAVAILABLE') {
-    return json(response, 503, {
-      error: 'Service unavailable',
-      message: error.message,
-    });
-  }
-
-  return json(response, getHttpStatus(error), serializeError(error, fallbackMessage));
-}
-
-module.exports = {
-  createCallRoutes,
-};
+module.exports = { createCallRoutes };
