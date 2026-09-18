@@ -3,22 +3,15 @@ import {
   buildVoiceReport,
   normalizeReportFilters,
 } from '@/src/services/reports/reporting-service.mjs';
-import {
-  STAFF_ACCESS_COOKIE,
-  STAFF_ACCESS_HEADER,
-  isAuthorizedStaffToken,
-} from '@/lib/staff-auth';
+import { getStaffUser } from '@/lib/staff-auth';
 
 export const dynamic = 'force-dynamic';
 
 const validRanges = new Set(['7d', '30d', 'all']);
 
-export function GET(request: NextRequest) {
-  const token =
-    request.cookies.get(STAFF_ACCESS_COOKIE)?.value ||
-    request.headers.get(STAFF_ACCESS_HEADER);
-
-  if (!isAuthorizedStaffToken(token)) {
+export async function GET(request: NextRequest) {
+  const user = await getStaffUser();
+  if (!user || user.mustChangePassword) {
     return NextResponse.json(
       { message: 'Staff authentication required.' },
       { status: 401 },

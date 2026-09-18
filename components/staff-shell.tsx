@@ -62,7 +62,7 @@ export function StaffShell({ children }: { children: React.ReactNode }) {
           </div>
           <StaffLogoutButton />
         </header>
-        <main className="p-6">{children}</main>
+        <main className="p-6"><p className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">Synthetic evaluation only. Voice dashboard and reports use sample data; calls are simulated.</p>{children}</main>
       </div>
     </div>
   );

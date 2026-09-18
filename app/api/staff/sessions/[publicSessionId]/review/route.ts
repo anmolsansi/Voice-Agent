@@ -1,3 +1,4 @@
+import { readBoundedBody } from '@/lib/bounded-body';
 import { NextRequest, NextResponse } from 'next/server';
 import { getStaffProxyHeaders } from '@/lib/staff-auth';
 
@@ -7,7 +8,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { publicSessionId: string } },
 ) {
-  const body = await request.text();
+  try {
+  const body = await readBoundedBody(request, 256 * 1024);
   const response = await fetch(
     `${API_BASE_URL}/api/staff/sessions/${encodeURIComponent(params.publicSessionId)}/review`,
     {
@@ -18,6 +20,7 @@ export async function POST(
       },
       body,
       cache: 'no-store',
+      signal: AbortSignal.timeout(10000),
     },
   );
 
@@ -29,4 +32,7 @@ export async function POST(
       'Content-Type': response.headers.get('content-type') || 'application/json',
     },
   });
+  } catch (error) {
+    return NextResponse.json({ message: error instanceof RangeError ? 'Request too large.' : 'Service unavailable.' }, { status: error instanceof RangeError ? 413 : 503 });
+  }
 }
