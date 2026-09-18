@@ -1,172 +1,48 @@
-const test = require('node:test');
+const { test, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
-const http = require('http');
-
-const { createApp } = require('../../app');
-const { closePool } = require('../../lib/db/postgres');
-const { callDetailStore } = require('./call-store');
-const { persistCallDetail } = require('./call-service');
-
-async function resetStore() {
-  await callDetailStore.clearAll();
-  await closePool();
-  delete process.env.DATABASE_URL;
-  delete process.env.ALLOW_MEMORY_FALLBACK;
-  delete process.env.STORE_RECORDING_URLS;
-  delete process.env.PROVIDER_RECORDING_URLS_ENABLED;
-  process.env.NODE_ENV = 'test';
-}
-
-function startTestServer(nodeEnv = 'test') {
-  const app = createApp({ appName: 'test', port: 0, nodeEnv });
-  const server = http.createServer(app);
-
-  return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      resolve({
-        server,
-        baseUrl: `http://127.0.0.1:${address.port}`,
-      });
-    });
-  });
-}
-
-async function stopTestServer(server) {
-  await new Promise((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
-}
-
-test.beforeEach(async () => {
-  await resetStore();
-  process.env.ALLOW_MEMORY_FALLBACK = 'true';
+const { setup, api, query, closePool } = require('../../../tests/helpers/database.cjs');
+const { createCallAttempt, updateCallStatus, finalizeCall } = require('./service');
+const { persistCallDetail, getCallDetail } = require('./call-service');
+let fixture, call;
+beforeEach(async () => {
+  fixture = await setup();
+  const { patientId, scheduleId, idempotencyKey } = fixture;
+  call = (await createCallAttempt({ patientId, scheduleId, idempotencyKey })).call;
+  for (const status of ['starting','in_progress','finalizing']) await updateCallStatus(call.id, { status });
 });
-
-test.after(async () => {
-  await resetStore();
-});
-
-test('persistCallDetail orders transcript turns by timestamp and sequence', async () => {
-  const detail = await persistCallDetail({
-    publicCallId: 'call_ordering',
-    provider: 'unit-test',
-    status: 'completed',
-    transcriptStatus: 'complete',
-    transcriptTurns: [
-      {
-        speaker: 'patient',
-        text: 'Second by sequence',
-        sequence: 2,
-        startedAt: '2026-05-11T10:00:03.000Z',
-      },
-      {
-        speaker: 'agent',
-        text: 'First by time',
-        sequence: 5,
-        startedAt: '2026-05-11T10:00:01.000Z',
-      },
-      {
-        speaker: 'patient',
-        text: 'Second by time, first by sequence',
-        sequence: 1,
-        startedAt: '2026-05-11T10:00:03.000Z',
-      },
-    ],
-  });
-
-  assert.deepEqual(
-    detail.transcript.turns.map((turn) => turn.text),
-    ['First by time', 'Second by time, first by sequence', 'Second by sequence'],
-  );
+after(closePool);
+test('persisted transcript turns sort by timestamp then sequence', async () => {
+  await finalizeCall(call.id, { transcriptStatus: 'ready' });
+  const detail = await persistCallDetail(call.id, { publicCallId: 'call_ordering', transcriptTurns: [
+    { speaker: 'patient', text: 'Third', sequence: 2, startedAt: '2026-05-11T10:00:03Z' },
+    { speaker: 'agent', text: 'First', sequence: 5, startedAt: '2026-05-11T10:00:01Z' },
+    { speaker: 'patient', text: 'Second', sequence: 1, startedAt: '2026-05-11T10:00:03Z' },
+  ] });
+  assert.deepEqual(detail.transcript.turns.map((t) => t.text), ['First','Second','Third']);
   assert.equal(detail.transcript.status, 'complete');
 });
-
-test('GET /api/calls/:publicCallId/detail returns stable detail shape and redacts recording URL by default', async () => {
-  const { server, baseUrl } = await startTestServer();
-
+test('linked detail API preserves shape, derives lifecycle and keeps recordings disabled', async () => {
+  await finalizeCall(call.id, { transcriptStatus: 'ready', outcome: 'callback_needed' });
+  const client = await api(fixture.token);
   try {
-    const createResponse = await fetch(`${baseUrl}/api/calls`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        publicCallId: 'call_api_shape',
-        provider: 'voice-provider',
-        providerCallId: 'provider-123',
-        direction: 'outbound',
-        status: 'completed',
-        transcriptStatus: 'partial',
-        startedAt: '2026-05-11T11:00:00.000Z',
-        outcome: { disposition: 'callback_needed' },
-        events: [
-          {
-            eventType: 'Provider.Call Started',
-            source: 'provider',
-            providerEventId: 'evt-1',
-            occurredAt: '2026-05-11T11:00:00.000Z',
-            rawPayloadRef: 's3://payloads/evt-1.json',
-          },
-        ],
-        transcriptTurns: [
-          {
-            speaker: 'agent',
-            text: 'Hello, this is CheckIn Care.',
-            startedAt: '2026-05-11T11:00:01.000Z',
-            confidence: 0.98,
-            promptId: 'welcome',
-            stateId: 'greeting',
-          },
-        ],
-        recording: {
-          providerRecordingId: 'rec-1',
-          status: 'available',
-          url: 'https://recordings.example.test/rec-1.wav',
-          durationSeconds: 42,
-          format: 'wav',
-        },
-        auditLogs: [
-          {
-            actorType: 'system',
-            action: 'call_completed',
-            entityType: 'call',
-          },
-        ],
-      }),
-    });
-
-    assert.equal(createResponse.status, 201);
-
-    const response = await fetch(`${baseUrl}/api/calls/call_api_shape/detail`);
-    const payload = await response.json();
-
-    assert.equal(response.status, 200);
-    assert.equal(payload.callDetail.call.publicCallId, 'call_api_shape');
-    assert.equal(payload.callDetail.timeline[0].eventType, 'provider_call_started');
-    assert.equal(payload.callDetail.timeline[0].rawPayloadRef, 's3://payloads/evt-1.json');
-    assert.equal(payload.callDetail.transcript.status, 'partial');
-    assert.equal(payload.callDetail.transcript.turns[0].speaker, 'agent');
-    assert.equal(payload.callDetail.transcript.turns[0].promptId, 'welcome');
-    assert.equal(payload.callDetail.outcome.disposition, 'callback_needed');
-    assert.equal(payload.callDetail.recording.available, true);
-    assert.equal(payload.callDetail.recording.urlStored, false);
-    assert.equal(payload.callDetail.recording.url, null);
-    assert.equal(payload.callDetail.auditLogs[0].action, 'call_completed');
-  } finally {
-    await stopTestServer(server);
-  }
+    const response = await client.request(`/api/calls/${call.id}/detail`, { publicCallId: 'call_shape', events: [{ eventType: 'Provider.Call Started', source: 'provider', providerEventId: 'evt-1', occurredAt: '2026-05-11T11:00:00Z' }], transcriptTurns: [{ speaker: 'agent', text: 'Synthetic greeting' }] }, 'PUT');
+    assert.equal(response.status, 200, JSON.stringify(await response.clone().json()));
+    await query("INSERT INTO recording_metadata(call_id,provider_recording_id,status,url,url_stored) SELECT id,'historical-test','available','https://example.test/historical',true FROM calls WHERE attempt_id=$1", [call.id]);
+    const detail = (await (await client.request('/api/calls/call_shape/detail')).json()).callDetail;
+    assert.equal(detail.call.attemptId, call.id); assert.equal(detail.call.status, 'completed');
+    assert.equal(detail.timeline[0].eventType, 'provider_call_started');
+    assert.equal(detail.transcript.turns[0].speaker, 'agent');
+    assert.equal(detail.outcome.disposition, 'callback_needed');
+    assert.equal(detail.recording.available, false); assert.equal(detail.recording.url, null);
+    assert(detail.auditLogs.some((e) => e.action === 'call.detail_updated'));
+    assert.equal((await client.request(`/api/calls/${call.id}/detail`, { status: 'queued' }, 'PUT')).status, 400);
+    assert.equal((await client.request(`/api/calls/${call.id}/detail`, { recording: { url: 'https://example.test' } }, 'PUT')).status, 400);
+  } finally { await client.close(); }
 });
-
-test('delayed transcript state is represented when no turns are available yet', async () => {
-  const detail = await persistCallDetail({
-    publicCallId: 'call_delayed_transcript',
-    provider: 'unit-test',
-    status: 'completed',
-    transcriptStatus: 'delayed',
-    transcriptUnavailableReason: 'provider_processing',
-  });
-
-  assert.equal(detail.transcript.status, 'delayed');
-  assert.equal(detail.transcript.isDelayed, true);
-  assert.equal(detail.transcript.unavailableReason, 'provider_processing');
-  assert.deepEqual(detail.transcript.turns, []);
+test('pending transcript represents delayed detail with no available turns', async () => {
+  await finalizeCall(call.id, { transcriptStatus: 'pending' });
+  await persistCallDetail(call.id, { publicCallId: 'delayed', transcriptUnavailableReason: 'provider_processing' });
+  const detail = await getCallDetail('delayed');
+  assert.equal(detail.transcript.status, 'delayed'); assert.equal(detail.transcript.isDelayed, true);
+  assert.equal(detail.transcript.unavailableReason, 'provider_processing'); assert.deepEqual(detail.transcript.turns, []);
 });

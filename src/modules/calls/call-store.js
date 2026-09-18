@@ -124,6 +124,7 @@ class CallDetailStore {
   }
 
   handlePersistenceError(error) {
+    if (error.status) throw error;
     if (this.canUseMemoryFallback()) {
       return;
     }
@@ -136,6 +137,7 @@ class CallDetailStore {
       const result = await query(
         `insert into calls (
           id,
+          attempt_id,
           public_call_id,
           intake_session_id,
           provider,
@@ -148,7 +150,7 @@ class CallDetailStore {
           ended_at,
           outcome,
           metadata
-        ) values ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10::timestamptz, $11::timestamptz, $12::jsonb, $13::jsonb)
+        ) values ($1, $14::uuid, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10::timestamptz, $11::timestamptz, $12::jsonb, $13::jsonb)
         on conflict (public_call_id) do update set
           intake_session_id = excluded.intake_session_id,
           provider = excluded.provider,
@@ -162,7 +164,8 @@ class CallDetailStore {
           outcome = excluded.outcome,
           metadata = excluded.metadata,
           updated_at = current_timestamp
-        returning id, public_call_id, intake_session_id, provider, provider_call_id, direction, status, transcript_status, transcript_unavailable_reason, started_at, ended_at, outcome, metadata, created_at, updated_at`,
+        WHERE calls.attempt_id = excluded.attempt_id
+        returning id, attempt_id, public_call_id, intake_session_id, provider, provider_call_id, direction, status, transcript_status, transcript_unavailable_reason, started_at, ended_at, outcome, metadata, created_at, updated_at`,
         [
           call.id,
           call.publicCallId,
@@ -177,8 +180,10 @@ class CallDetailStore {
           call.endedAt,
           JSON.stringify(call.outcome || {}),
           JSON.stringify(call.metadata || {}),
+          call.attemptId,
         ],
       );
+      if (!result.rows[0]) throw Object.assign(new Error('Public call identifier already belongs to another attempt.'), { status: 409, code: 'DETAIL_ID_CONFLICT' });
       const saved = mapCallRow(result.rows[0]);
       this.memory.saveCall(saved);
       return saved;
@@ -258,6 +263,7 @@ class CallDetailStore {
           state_id = excluded.state_id,
           is_partial = excluded.is_partial,
           metadata = excluded.metadata
+        WHERE transcript_turns.call_id = excluded.call_id
         returning id, call_id, speaker, text, sequence, started_at, ended_at, confidence, prompt_id, state_id, is_partial, metadata, created_at`,
         [
           turn.id,
@@ -274,6 +280,7 @@ class CallDetailStore {
           JSON.stringify(turn.metadata || {}),
         ],
       );
+      if (!result.rows[0]) throw Object.assign(new Error('Transcript identifier belongs to another call.'), { status: 409, code: 'TRANSCRIPT_CONFLICT' });
       const saved = mapTranscriptTurnRow(result.rows[0]);
       this.memory.saveTranscriptTurn(saved);
       return saved;
@@ -365,51 +372,54 @@ class CallDetailStore {
   async getDetailByPublicCallId(publicCallId) {
     try {
       const callResult = await query(
-        `select id, public_call_id, intake_session_id, provider, provider_call_id, direction, status, transcript_status, transcript_unavailable_reason, started_at, ended_at, outcome, metadata, created_at, updated_at
-         from calls
-         where public_call_id = $1`,
+        `select c.*, a.status as canonical_status, a.started_at as canonical_started_at,
+           a.ended_at as canonical_ended_at, a.provider_call_id as canonical_provider_call_id,
+           a.outcome as canonical_outcome, a.transcript_status as canonical_transcript_status
+         from calls c JOIN call_attempts a ON a.id=c.attempt_id where c.public_call_id=$1`,
         [publicCallId],
       );
 
-      if (!callResult.rows[0]) {
-        return this.memory.getCallByPublicId(publicCallId)
-          ? this.memory.getDetail(this.memory.getCallByPublicId(publicCallId).id)
-          : null;
-      }
-
+      if (!callResult.rows[0]) return null;
+      const row = callResult.rows[0];
+      Object.assign(row, { status: row.canonical_status, started_at: row.canonical_started_at,
+        ended_at: row.canonical_ended_at, provider_call_id: row.canonical_provider_call_id,
+        outcome: row.canonical_outcome ? { disposition: row.canonical_outcome } : {},
+        transcript_status: { not_started: 'unavailable', pending: 'delayed', ready: 'complete', failed: 'unavailable' }[row.canonical_transcript_status] });
       const call = mapCallRow(callResult.rows[0]);
       this.memory.saveCall(call);
 
-      const [eventsResult, turnsResult, recordingsResult, auditResult] = await Promise.all([
-        query(
+      const [eventsResult, turnsResult, recordingsResult, auditResult] = [
+        await query(
           `select id, call_id, event_type, source, sequence, occurred_at, provider_event_id, raw_payload_ref, metadata, created_at
            from call_events
            where call_id = $1
            order by occurred_at asc, sequence asc, created_at asc`,
           [call.id],
         ),
-        query(
+        await query(
           `select id, call_id, speaker, text, sequence, started_at, ended_at, confidence, prompt_id, state_id, is_partial, metadata, created_at
            from transcript_turns
            where call_id = $1
            order by started_at asc nulls last, sequence asc, created_at asc`,
           [call.id],
         ),
-        query(
+        await query(
           `select id, call_id, provider_recording_id, status, url, url_stored, duration_seconds, format, metadata, created_at
            from recording_metadata
            where call_id = $1
            order by created_at asc`,
           [call.id],
         ),
-        query(
+        await query(
           `select id, call_id, actor_type, actor_id, action, entity_type, entity_id, metadata, created_at
-           from call_audit_logs
-           where call_id = $1
+           from call_audit_logs where call_id=$1
+           UNION ALL
+           select id, $1::uuid AS call_id, actor_type, actor_id, action, entity_type, entity_id::text, metadata, created_at
+           from audit_logs where entity_type='call_attempt' AND entity_id=$2
            order by created_at asc`,
-          [call.id],
+          [call.id, call.attemptId],
         ),
-      ]);
+      ];
 
       return {
         call,
@@ -444,6 +454,7 @@ function normalizeCall(input = {}) {
 
   return {
     id: input.id || randomUUID(),
+    attemptId: input.attemptId,
     publicCallId: normalizeRequiredText(input.publicCallId, 'publicCallId'),
     intakeSessionId: normalizeOptionalText(input.intakeSessionId),
     provider: normalizeOptionalText(input.provider) || 'unknown',
@@ -537,8 +548,6 @@ function buildCallDetailContract(detail) {
     return null;
   }
 
-  const recordings = detail.recordings || [];
-  const recording = recordings[0] || null;
   const transcriptTurns = sortTimeline(detail.transcriptTurns || []);
   const transcriptStatus = deriveTranscriptStatus(detail.call.transcriptStatus, transcriptTurns);
 
@@ -552,25 +561,11 @@ function buildCallDetailContract(detail) {
       turns: transcriptTurns,
     },
     outcome: detail.call.outcome || {},
-    recording: recording
-      ? {
-          available: recording.status === 'available',
-          status: recording.status,
-          url: recording.url,
-          urlStored: recording.urlStored,
-          durationSeconds: recording.durationSeconds,
-          format: recording.format,
-          metadata: recording.metadata,
-        }
-      : {
-          available: false,
-          status: 'unavailable',
-          url: null,
-          urlStored: false,
-          durationSeconds: null,
-          format: null,
-          metadata: {},
-        },
+    // Historical metadata remains in PostgreSQL, but this milestone never exposes recordings.
+    recording: {
+      available: false, status: 'unavailable', url: null, urlStored: false,
+      durationSeconds: null, format: null, metadata: {},
+    },
     auditLogs: sortTimeline(detail.auditLogs || []),
   };
 }
@@ -632,6 +627,7 @@ function sortTimeline(items) {
 function mapCallRow(row) {
   return {
     id: row.id,
+    attemptId: row.attempt_id,
     publicCallId: row.public_call_id,
     intakeSessionId: row.intake_session_id,
     provider: row.provider,
