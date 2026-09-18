@@ -12,7 +12,7 @@
     "start:backend": "node src/server.js",
     "lint": "next lint",
     "check:voice-agent": "node scripts/validate-fixtures.mjs",
-    "test": "node --test src/config/*.test.js src/modules/**/*.test.js",
+    "test": "node --test src/config/*.test.js src/modules/auth/*.test.js src/modules/intake/*.test.js",
     "db:migrate": "node db/run-migrations.cjs up",
     "db:rollback": "node db/run-migrations.cjs down",
     "db:rollback:all": "node db/run-migrations.cjs down-all",
@@ -20,7 +20,9 @@
     "typecheck": "tsc --noEmit",
     "db:seed-staff": "node scripts/seed-staff.cjs",
     "webhook:simulate": "node scripts/simulate-webhook.cjs",
-    "call:simulate": "node scripts/simulate-call.cjs"
+    "call:simulate": "node scripts/simulate-call.cjs",
+    "test:integration": "node --test --test-concurrency=1 tests/*.integration.test.cjs src/modules/calls/*.test.js",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "dotenv": "^17.3.1",
@@ -33,15 +35,16 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "20.17.30",
     "@types/react": "18.3.20",
     "@types/react-dom": "18.3.7",
     "autoprefixer": "10.4.21",
     "eslint": "8.57.1",
     "eslint-config-next": "14.2.30",
+    "node-pg-migrate": "^8.0.3",
     "postcss": "8.5.3",
     "tailwindcss": "3.4.17",
-    "typescript": "5.8.3",
-    "node-pg-migrate": "^8.0.3"
+    "typescript": "5.8.3"
   }
 }
