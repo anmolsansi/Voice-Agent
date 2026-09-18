@@ -70,3 +70,5 @@ Identity checkpoint: password hashing unit test and five PostgreSQL integration 
 Final local implementation checkpoint:17 ordinary tests,23 PostgreSQL integration tests,3 browser scenarios, lint/typecheck/fixtures/build and CLI checks pass. See [full evidence](FOUNDATION_EVIDENCE.md), [operator guide](FOUNDATION_GUIDE.md), and [ten review packets](tickets/Pending/).
 
 Checklist completion means implementation and local verification, not human approval, staging deployment or commercial release. Hosted CI is tracked separately in the evidence record. Microtasks vary in effort; no equal 2% estimate is claimed.
+
+Hosted acceptance: [passed run35310456202](https://github.com/anmolsansi/Voice-Agent/actions/runs/35310456202) on implementation commit9277c84. [Draft PR34](https://github.com/anmolsansi/Voice-Agent/pull/34) awaits review; no deployment performed.

@@ -38,4 +38,3 @@ export async function getStaffIntakeSession(publicSessionId: string) {
   const payload = (await response.json()) as { session: IntakeSession };
   return payload.session;
 }
-

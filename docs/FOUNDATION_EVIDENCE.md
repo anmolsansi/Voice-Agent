@@ -44,7 +44,9 @@ Screenshots live in `/tmp/checkincare-browser-results`; CI uploads browser evide
 
 ## Hosted verification and deployment
 
-Hosted CI: pending publication/run. This section must be updated from the actual GitHub Actions result; local success does not imply hosted success.
+Hosted CI: **passed** for implementation commit `9277c842effd10e89e98b92f64d0773210dbc1dc` on Node22/PostgreSQL16. [PR acceptance run35310456202](https://github.com/anmolsansi/Voice-Agent/actions/runs/35310456202) passed dependency install, migrations, lint, typecheck, ordinary tests, fixture validation,23 integration tests, production build, Chromium installation,3 browser scenarios and evidence artifact upload. [Draft PR34](https://github.com/anmolsansi/Voice-Agent/pull/34) remains unmerged.
+
+The subsequent evidence commit updates documentation and removes one trailing blank line only; it changes no runtime behavior. Hosted Actions annotations warn that v4 actions use a deprecated Node20 runner target (automatically run on Node24), and ubuntu-latest will change image later; neither failed this run.
 
 No synthetic staging destination is configured, and no staging deployment or human approval has occurred. The implementation remains on a review branch. The ten packets under `docs/tickets/Pending` document the implemented contracts and review checkpoints; their directory does not imply accepted review.
 
